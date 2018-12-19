@@ -1,0 +1,17 @@
+{
+  "name": "webstemplayer",
+  "version": "0.0.1",
+  "description": "multi track javascript audioplayer",
+  "main": "index.js",
+  "dependencies": {
+    "material-icons": "^0.2.3",
+    "sass": "^1.15.1",
+    "vue": "^2.5.17"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC"
+}

@@ -1,0 +1,1067 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>jam - multitrack player - player</title>
+  <link rel="stylesheet" href="data/stemplayer/css/style.css">
+</head>
+<body>
+<div class="page session">
+
+</div>
+
+<template id="main-nav-markup">
+    <nav class="page__navigation menu">
+      <ul class="menu__list">
+        <li class="menu__item">
+          <a href="#" class="menu__link">Dashboard</a>
+        </li>
+        <li class="menu__item">
+          <a href="#" class="menu__link navigate" data-targettype="sessionlist">Sessions</a>
+        </li>
+        <li class="menu__item">
+          <a href="#" class="menu__link">Player</a>
+        </li>
+        <li class="menu__item">
+          <a href="#" class="menu__link">Statistics</a>
+        </li>
+        <li class="menu__item menu__item--logo">
+          <a href="#" class="menu__link logo">
+            <span class="logo__icon"></span>
+            <span class="logo__label">jam</span>
+          </a>
+        </li>
+      </ul>
+    </nav>
+</template>
+<template id="track-markup">
+  <header class="page__header">
+    <h1 class="page__title">
+      <span class="view"><span class="view__highlight">Pl</span>ayer</span>
+      <span class="page__additional">Stromwerk</span>
+    </h1>
+    <ul class="page__info session__list">
+      <li class="session__item">
+        <time class="session__date date">
+          <span class="date__year">{session.year}</span>
+          <span class="date__wrapper">
+            <span class="date__month">{session.month}</span>
+            <span class="date__day">{session.day}</span>
+          </span>
+        </time>
+      </li>
+      <li class="session__item session__item--session">
+        <a href="#" data-targettype="tracklist" data-targetsession="{session.index}" class="navigate">
+        Session <span class="session__symbol">#</span><span class="session__nr">{session.counter}</span>
+        </a>
+      </li>
+      <li class="session__item">
+        <span class="session__tracks">{session.trackCount}</span> Tracks
+      </li>
+      <li class="session__detail">
+        <span class="session__duration">{session.duration}</span>
+        <span class="session__unit">min</span>
+      </li>
+    </ul>
+    {mainNav}
+  </header>
+  <aside class="page__sidebar tracklist">
+    <h3 class="tracklist__title">Tracklist Session <span class="session__symbol">#</span><span class="session__nr">{session.counter}</span></h3>
+    <ul class="tracklist__list">
+      {trackNavigation}
+    </ul>
+  </aside>
+  <main class="page__wrapper track track--detail">
+    <header class="track__header">
+      <button class="track__play play" title="Play/pause Track „{track.title}“">
+        <svg width="100%" height="100%" viewBox="0 0 36 36" >
+            <defs>
+                <path id="pause-icon" data-state="playing" d="M11,10 L17,10 17,26 11,26 M20,10 L26,10 26,26 20,26" />
+                <path id="play-icon"  data-state="paused"  d="M11,10 L18,13.74 18,22.28 11,26 M18,13.74 L26,18 26,18 18,22.28" />
+            </defs>
+            <use xlink:href="#play-icon" />
+        </svg>
+      </button>
+      <h2 class="track__title">{track.title}</h2>
+      <div class="track__detail">
+        <span class="track__bpm">{track.bpm}</span>
+        <span class="track__unit">bpm</span>
+      </div>
+      <div class="track__detail track__times">
+        <span class="track__current" id="time__elapsed">08:31</span> / 
+        <span class="track__duration" id="time__total">08:31</span>
+      </div>
+      <div class="track__detail track__detail-rating">
+        <ul class="rating rating--4-5 rating--has-rated">
+          <li class="rating__range">
+            <button class="rating__star button">★</button>
+          </li>
+          <li class="rating__range">
+            <button class="rating__star button">★</button>
+          </li>
+          <li class="rating__range">
+            <button class="rating__star button">★</button>
+          </li>
+          <li class="rating__range">
+            <button class="rating__star button">☆</button>
+          </li>
+          <li class="rating__range">
+            <button class="rating__star button">☆</button>
+          </li>
+        </ul>
+        <span class="track__rating">
+              4,5
+            </span>
+        <span class="track__rate-cta">Rate now</span>
+      </div>
+    </header>
+    <ul class="track__tools tool tool--all">
+      <li class="tool__item">
+        <button class="tool__action tool__action--solo button">Unsolo All</button>
+      </li>
+      <li class="tool__item">
+        <button class="tool__action tool__action--mute button">Unmute All</button>
+      </li>
+      <li class="tool__item">
+        <button class="tool__action tool__action--save button">Save Settings</button>
+      </li>
+    </ul>
+    <ul class="track__lines">
+      {stemTracks}
+      
+    </ul>
+  </main>
+</template>
+<template id="stemTrack-markup">
+      <li class="track__line line line--color-{color}" id="track__line{index}">
+        <div class="line__wave" id="line__wave{index}">
+            <audio id="player{index}" class="player">
+               <source type="audio/mpeg" src="{audiosource}">
+            </audio>
+            <div id="waveform__wrapper{index}" class="waveform__wrapper"></div>
+            <div class="seek__progress"></div>
+            <div class="seek__clickarea"></div>
+        </div>
+        <div class="line__audio line__audio--left"></div>
+        <div class="line__audio line__audio--right"></div>
+        <div class="line__meta" id="line_meta{index}">
+          <ul class="line__tools tool tool--line">
+            <li class="tool__item">
+                <button class="tool__action tool__action--isolate button" id="tool__action--isolate{index}" data-target="player{index}"><abbr title="Toggle isolate">I</abbr></button>
+            </li>
+            <li class="tool__item">
+                <button class="tool__action tool__action--solo button" id="tool__action--solo{index}" data-target="player{index}"><abbr title="Toggle solo">S</abbr></button>
+            </li>
+            <li class="tool__item">
+                <button class="tool__action tool__action--mute button" id="tool__action--mute{index}" data-target="player{index}"><abbr title="Toggle mute">M</abbr></button>
+            </li>
+          </ul>
+          <div class="line__description">
+            <span class="tool__item tool__item--settings">
+                <button class="tool__action tool__action--settings button" title="Toggle Settings">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+                    <path d="M0 0h24v24H0z" fill="none"/>
+                    <path class="dotpath" d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
+                  </svg>
+                </button>
+            </span>
+            <div class="line__artist artist">
+              jammer
+              <span class="artist__name">{title}</span>
+            </div>
+            <div class="tool__item tool__item--volume">
+                <input type="range" min="0" max="1" step="0.01" class="tool__action tool__action--volume" id="tool__action--volume{index}" value="0" data-target="player{index}">
+            </div>
+          </div>
+        </div>
+      </li>
+</template>
+    <template id="trackBulletNavigation-markup">      
+      <li class="tracklist__item tracklist__item--{active}">
+        <a href="#" class="tracklist__link track navigate" data-targetsession="{session.index}" data-targettype="track" data-targettrack="{track.index}">
+          <span class="track_letter track__letter-circled">{track.index}</span>
+          <h4 class="track__title">{track.title}</h4>
+          <ul class="track__list">
+            <li class="track__detail">
+              <span class="track__duration">{track.duration}</span><!--
+              --><span class="track__unit">m</span>
+            </li>
+            <li class="track__detail">
+              <span class="track__bpm">126</span>
+              <span class="track__unit">bpm</span>
+            </li>
+            <li class="track__detail">
+              <span class="track__rating">5,00</span>
+            </li>
+          </ul>
+        </a>
+      </li>
+    </template>
+    
+    
+    
+<template id="trackList-markup">
+    <header class="page__header">
+        <h1 class="page__title">
+        <span class="view"><span class="view__highlight">Se</span>ssion <span class="view__highlight">#{session.counter}</span></span>
+        <span class="page__additional">Stromwerk</span>
+        </h1>
+        <ul class="page__info session__list">
+        <li class="session__item">
+            <time class="session__date date">
+            <span class="date__year">{session.year}</span>
+            <span class="date__wrapper">
+                <span class="date__month">{session.month}</span>
+                <span class="date__day">{session.day}</span>
+            </span>
+            </time>
+        </li>
+        <li class="session__item">
+            <span class="session__tracks">{session.trackCount}</span> Tracks
+        </li>
+        <li class="session__detail">
+            <span class="session__duration">{session.duration}</span>
+            <span class="session__unit">min</span>
+        </li>
+        </ul>
+        {mainNav}
+    </header>
+ <main class="page__wrapper session session--detail">
+    <a href="#" data-targettype="sessionlist" class="navigate">&lt; All sessions</a>
+    <div class="tracklist__wrapper">
+        {tracklistItems}
+    </div>
+  </main>
+</template>
+
+    <template id="trackListTableHeader-markup">
+        <tr>
+          <th>#</th>
+          <th>Title</th>
+          <th>Bpm</th>
+          <th>Duration</th>
+          <th>Jammers</th>
+          <th>Track Rating</th>
+        </tr>
+    </template>
+
+    <template id="trackListItem-markup">
+        <tr data-targettype="track" data-targettrack="{track.trackNumber}" data-targetsession="{session.index}" class="navigate">
+          <td>
+              <span class="track__letter track__letter-circled">{track.trackNumber}</span>
+          </td>
+          <td class="text--bold">
+              {track.title}
+          </td>
+          <td>
+              <span class="bright">{track.bpm}</span>
+          </td>
+          <td>
+              <span class="bright">{track.duration}m</span>
+          </td>
+          <td>
+              {track.stemTitles}
+          </td>
+          <td>
+              <nobr><span class="rating__star">★</span><!--
+              --><span class="rating__star">★</span><!--
+              --><span class="rating__star">★</span><!--
+              --><span class="rating__star">☆</span><!--
+              --><span class="rating__star">☆</span>
+              <span class="session__rating">
+                4,5
+              </span>
+              </nobr>
+          </td>
+        </tr>
+    </template>
+    
+    
+<template id="sessionList-markup">
+    <header class="page__header">
+        <h1 class="page__title">
+        <span class="view"><span class="view__highlight">Al</span>l Sessions</span>
+        <span class="page__additional">Stromwerk</span>
+        </h1>
+        <ul class="page__info session__list">
+        <li class="session__item">
+          <span class="session__sessions">{sessions.count}</span> Sessions
+        </li>
+        <li class="session__item">
+            <span class="session__tracks">{sessions.trackCount}</span> Tracks
+        </li>
+        <li class="session__detail">
+            <span class="session__duration">{sessions.duration}</span>
+            <span class="session__unit">hours</span>
+        </li>
+        </ul>
+        {mainNav}
+    </header>
+    
+      <main class="page__wrapper session session--list">
+        <div class="sessionlist__wrapper">
+            {sessionlistItems}
+        </div>
+      </main>
+    </template>
+    
+
+    
+    <template id="sessionListTableHeader-markup">
+        <tr>
+          <th class="heading_date">Date</th>
+          <th class="heading__number text--centered">Session #</th>
+          <th class="heading__trackcount">Tracks</th>
+          <th class="heading__duration">Duration</th>
+          <th class="heading__jammers">Jammers</th>
+          <th class="heading__rating">Avarage Rating</th>
+        </tr>
+    </template>
+
+    <template id="sessionListItem-markup">
+
+        <tr class="navigate" data-targettype="tracklist" data-targetsession="{session.index}" >
+          <td class="session__date">
+              <time class="session__date date">
+              <span class="date__year">{session.year}</span>
+              <span class="date__wrapper">
+                <span class="date__month">{session.month}</span>
+                <span class="date__day">{session.day}</span>
+              </span>
+            </time>
+          </td>
+          <td class="text--centered session__counter">
+            <h3><span class="darker__text session__symbol">#</span>{session.counter}</h3>
+          </td>
+          <td class="text--centered">
+            <span class="darker__text">{session.trackCount}</span>
+          </td>
+          <td class="text--centered">
+            <span class="darker__text">{session.duration} min</span>
+          </td>
+          <td>
+            {session.stemTitles}
+          </td>
+          <td>
+              <nobr><span class="rating__star">★</span><!--
+              --><span class="rating__star">★</span><!--
+              --><span class="rating__star">★</span><!--
+              --><span class="rating__star">☆</span><!--
+              --><span class="rating__star">☆</span>
+              <span class="session__rating">
+                4,5
+              </span>
+              </nobr>
+          </td>
+        </tr>
+        
+        
+    </template>
+    <template id="stemTitles-markup">
+      <nobr><span class="stem__title stem__title--{stem.color}"><span class="dot"></span> {stem.title}</span></nobr>
+    </template>
+    
+    <!-- dont remove next comment!! it will be used for new track config injection -->
+    <!--NEWTRACKCONFIGS-->
+
+    
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0058" data-trackindex="A" src="data/Stromwerk-Session_0058-2018.12.15-krt-was-rki-frn/data/0058A-Duke/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0058" data-trackindex="B" src="data/Stromwerk-Session_0058-2018.12.15-krt-was-rki-frn/data/0058B-Raw Dementia/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0058" data-trackindex="C" src="data/Stromwerk-Session_0058-2018.12.15-krt-was-rki-frn/data/0058C-Bergdorf Domina/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0058" data-trackindex="D" src="data/Stromwerk-Session_0058-2018.12.15-krt-was-rki-frn/data/0058D-Contiguous Battle/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0058" data-trackindex="E" src="data/Stromwerk-Session_0058-2018.12.15-krt-was-rki-frn/data/0058E-Innocent/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0058" data-trackindex="F" src="data/Stromwerk-Session_0058-2018.12.15-krt-was-rki-frn/data/0058F-Hamptons Connection/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0058" data-trackindex="G" src="data/Stromwerk-Session_0058-2018.12.15-krt-was-rki-frn/data/0058G-Nutella Mother/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0058" data-trackindex="H" src="data/Stromwerk-Session_0058-2018.12.15-krt-was-rki-frn/data/0058H-Forest/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0058" data-trackindex="I" src="data/Stromwerk-Session_0058-2018.12.15-krt-was-rki-frn/data/0058I-Physical Jabba/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0058" data-trackindex="J" src="data/Stromwerk-Session_0058-2018.12.15-krt-was-rki-frn/data/0058J-Erotica/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0058" data-trackindex="K" src="data/Stromwerk-Session_0058-2018.12.15-krt-was-rki-frn/data/0058K-Desaster Repulsion/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0058" data-trackindex="L" src="data/Stromwerk-Session_0058-2018.12.15-krt-was-rki-frn/data/0058L-Shotgun Taliban/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0058" data-trackindex="M" src="data/Stromwerk-Session_0058-2018.12.15-krt-was-rki-frn/data/0058M-Homophob Kittycat/data/audio/../config.js"></script>
+
+
+
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0057" data-trackindex="A" src="data/Stromwerk-Session_0057-2018.11.24-was-rki-ast/data/0057A-Femme Swarovski Bikini/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0057" data-trackindex="B" src="data/Stromwerk-Session_0057-2018.11.24-was-rki-ast/data/0057B-Upper Squarewave/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0057" data-trackindex="C" src="data/Stromwerk-Session_0057-2018.11.24-was-rki-ast/data/0057C-Grand Observable Purge/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0057" data-trackindex="D" src="data/Stromwerk-Session_0057-2018.11.24-was-rki-ast/data/0057D-Miss Chastity/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0057" data-trackindex="E" src="data/Stromwerk-Session_0057-2018.11.24-was-rki-ast/data/0057E-Bake Agreement/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0057" data-trackindex="F" src="data/Stromwerk-Session_0057-2018.11.24-was-rki-ast/data/0057F-Digital Botanic Fragment/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0057" data-trackindex="G" src="data/Stromwerk-Session_0057-2018.11.24-was-rki-ast/data/0057G-Rapture/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0057" data-trackindex="H" src="data/Stromwerk-Session_0057-2018.11.24-was-rki-ast/data/0057H-Mustang Sky/data/audio/../config.js"></script>
+
+
+
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0056" data-trackindex="A" src="data/Stromwerk-Session_0056-2018.11.18-was-rki/data/0056A-Syndicate/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0056" data-trackindex="B" src="data/Stromwerk-Session_0056-2018.11.18-was-rki/data/0056B-Sensual Chair/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0056" data-trackindex="C" src="data/Stromwerk-Session_0056-2018.11.18-was-rki/data/0056C-Rudebwoy Army/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0056" data-trackindex="D" src="data/Stromwerk-Session_0056-2018.11.18-was-rki/data/0056D-Calcutta Tap/data/audio/../config.js"></script>
+
+
+
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0055" data-trackindex="A" src="data/Stromwerk-Session_0055-2018.11.10-was-rki-frn/data/0055A-Frontotemporal Runaway/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0055" data-trackindex="B" src="data/Stromwerk-Session_0055-2018.11.10-was-rki-frn/data/0055B-American Asphyxiation/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0055" data-trackindex="C" src="data/Stromwerk-Session_0055-2018.11.10-was-rki-frn/data/0055C-Lost Spiral/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0055" data-trackindex="D" src="data/Stromwerk-Session_0055-2018.11.10-was-rki-frn/data/0055D-Shitalo Fatalo/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0055" data-trackindex="E" src="data/Stromwerk-Session_0055-2018.11.10-was-rki-frn/data/0055E-Kundiman Fatality/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0055" data-trackindex="F" src="data/Stromwerk-Session_0055-2018.11.10-was-rki-frn/data/0055F-Mustang Player/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0055" data-trackindex="G" src="data/Stromwerk-Session_0055-2018.11.10-was-rki-frn/data/0055G-Rhodubbaludica/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0055" data-trackindex="H" src="data/Stromwerk-Session_0055-2018.11.10-was-rki-frn/data/0055H-El Camino Victim/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0055" data-trackindex="I" src="data/Stromwerk-Session_0055-2018.11.10-was-rki-frn/data/0055I-Innocent Murder/data/audio/../config.js"></script>
+
+
+
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0054" data-trackindex="A" src="data/Stromwerk-Session_0054-2018.11.03-was-rki-frn-pet/data/0054A-Loose Mother/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0054" data-trackindex="B" src="data/Stromwerk-Session_0054-2018.11.03-was-rki-frn-pet/data/0054B-Kundiman Combat/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0054" data-trackindex="C" src="data/Stromwerk-Session_0054-2018.11.03-was-rki-frn-pet/data/0054C-Innocent Vibe/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0054" data-trackindex="D" src="data/Stromwerk-Session_0054-2018.11.03-was-rki-frn-pet/data/0054D-Rudebwoy Giant/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0054" data-trackindex="E" src="data/Stromwerk-Session_0054-2018.11.03-was-rki-frn-pet/data/0054E-Schiamazzo di Bimbi (Take 4)/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0054" data-trackindex="F" src="data/Stromwerk-Session_0054-2018.11.03-was-rki-frn-pet/data/0054F-Public Storm/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0054" data-trackindex="G" src="data/Stromwerk-Session_0054-2018.11.03-was-rki-frn-pet/data/0054G-4x4 Storm/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0054" data-trackindex="H" src="data/Stromwerk-Session_0054-2018.11.03-was-rki-frn-pet/data/0054H-Sunset Squarewave/data/audio/../config.js"></script>
+
+
+
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0053" data-trackindex="A" src="data/Stromwerk-Session_0053-2018.10.27-was-rki-ast-frn/data/0053A-Yacht Club Gal/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0053" data-trackindex="B" src="data/Stromwerk-Session_0053-2018.10.27-was-rki-ast-frn/data/0053B-Physical Kittycat/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0053" data-trackindex="C" src="data/Stromwerk-Session_0053-2018.10.27-was-rki-ast-frn/data/0053C-El Camino Galaxy/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0053" data-trackindex="D" src="data/Stromwerk-Session_0053-2018.10.27-was-rki-ast-frn/data/0053D-Trans Zentrale Express/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0053" data-trackindex="E" src="data/Stromwerk-Session_0053-2018.10.27-was-rki-ast-frn/data/0053E-Panic Victim/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0053" data-trackindex="F" src="data/Stromwerk-Session_0053-2018.10.27-was-rki-ast-frn/data/0053F-Even Later/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0053" data-trackindex="G" src="data/Stromwerk-Session_0053-2018.10.27-was-rki-ast-frn/data/0053G-Mahogany Realness/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0053" data-trackindex="H" src="data/Stromwerk-Session_0053-2018.10.27-was-rki-ast-frn/data/0053H-Macaron Punk/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0053" data-trackindex="I" src="data/Stromwerk-Session_0053-2018.10.27-was-rki-ast-frn/data/0053I-Chandon Pleasure/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0053" data-trackindex="J" src="data/Stromwerk-Session_0053-2018.10.27-was-rki-ast-frn/data/0053J-Squared Kisses/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0053" data-trackindex="K" src="data/Stromwerk-Session_0053-2018.10.27-was-rki-ast-frn/data/0053K-Hamptons Pussycat/data/audio/../config.js"></script>
+
+
+
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0052" data-trackindex="A" src="data/Stromwerk-Session_0052-2018.09.01-was-rki-frn-car/data/0052A-Fatal Planet/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0052" data-trackindex="B" src="data/Stromwerk-Session_0052-2018.09.01-was-rki-frn-car/data/0052B-Patty Hearst Number/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0052" data-trackindex="C" src="data/Stromwerk-Session_0052-2018.09.01-was-rki-frn-car/data/0052C-Carlyle Lies/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0052" data-trackindex="D" src="data/Stromwerk-Session_0052-2018.09.01-was-rki-frn-car/data/0052D-Schiamazzo di Bimbi (Take 3)/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0052" data-trackindex="E" src="data/Stromwerk-Session_0052-2018.09.01-was-rki-frn-car/data/0052E-Ponzi Scheme Dancer/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0052" data-trackindex="F" src="data/Stromwerk-Session_0052-2018.09.01-was-rki-frn-car/data/0052F-Lucifers Monkey/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0052" data-trackindex="G" src="data/Stromwerk-Session_0052-2018.09.01-was-rki-frn-car/data/0052G-Lamour Warlord/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0052" data-trackindex="H" src="data/Stromwerk-Session_0052-2018.09.01-was-rki-frn-car/data/0052H-Amagansett Province/data/audio/../config.js"></script>
+
+
+
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0051" data-trackindex="A" src="data/Stromwerk-Session_0051-2018.08.25-krt-was-rki-frn-rzb/data/0051A-Firefly (Take 1)/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0051" data-trackindex="B" src="data/Stromwerk-Session_0051-2018.08.25-krt-was-rki-frn-rzb/data/0051B-Schiamazzo di Bimbi (Take 1)/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0051" data-trackindex="C" src="data/Stromwerk-Session_0051-2018.08.25-krt-was-rki-frn-rzb/data/0051C-Disparaged Funk/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0051" data-trackindex="D" src="data/Stromwerk-Session_0051-2018.08.25-krt-was-rki-frn-rzb/data/0051D-Massive Haters/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0051" data-trackindex="E" src="data/Stromwerk-Session_0051-2018.08.25-krt-was-rki-frn-rzb/data/0051E-Macaron Spinal Tap/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0051" data-trackindex="F" src="data/Stromwerk-Session_0051-2018.08.25-krt-was-rki-frn-rzb/data/0051F-Firefly (Take 2)/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0051" data-trackindex="G" src="data/Stromwerk-Session_0051-2018.08.25-krt-was-rki-frn-rzb/data/0051G-Desaster Paradise/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0051" data-trackindex="H" src="data/Stromwerk-Session_0051-2018.08.25-krt-was-rki-frn-rzb/data/0051H-Operationsbesteck/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0051" data-trackindex="I" src="data/Stromwerk-Session_0051-2018.08.25-krt-was-rki-frn-rzb/data/0051I-Doritos Science/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0051" data-trackindex="J" src="data/Stromwerk-Session_0051-2018.08.25-krt-was-rki-frn-rzb/data/0051J-Super Purge/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0051" data-trackindex="K" src="data/Stromwerk-Session_0051-2018.08.25-krt-was-rki-frn-rzb/data/0051K-4x4 Forest/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0051" data-trackindex="L" src="data/Stromwerk-Session_0051-2018.08.25-krt-was-rki-frn-rzb/data/0051L-Frontotemporal Border/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0051" data-trackindex="M" src="data/Stromwerk-Session_0051-2018.08.25-krt-was-rki-frn-rzb/data/0051M-Perfect Purge/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0051" data-trackindex="N" src="data/Stromwerk-Session_0051-2018.08.25-krt-was-rki-frn-rzb/data/0051N-Schiamazzo di Bimbi (Take 2)/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0051" data-trackindex="O" src="data/Stromwerk-Session_0051-2018.08.25-krt-was-rki-frn-rzb/data/0051O-Ultimate City/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0051" data-trackindex="P" src="data/Stromwerk-Session_0051-2018.08.25-krt-was-rki-frn-rzb/data/0051P-Arcocentric Segment/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0051" data-trackindex="Q" src="data/Stromwerk-Session_0051-2018.08.25-krt-was-rki-frn-rzb/data/0051Q-Dark Leadership/data/audio/../config.js"></script>
+
+
+
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0050" data-trackindex="A" src="data/Stromwerk-Session_0050-2018.08.18-krt-was-rki-ast-frn/data/0050A-Quahog Kisses/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0050" data-trackindex="B" src="data/Stromwerk-Session_0050-2018.08.18-krt-was-rki-ast-frn/data/0050B-Bunker Circumference/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0050" data-trackindex="C" src="data/Stromwerk-Session_0050-2018.08.18-krt-was-rki-ast-frn/data/0050C-Desaster Truck/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0050" data-trackindex="D" src="data/Stromwerk-Session_0050-2018.08.18-krt-was-rki-ast-frn/data/0050D-Brooklyn Zoo Victim/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0050" data-trackindex="E" src="data/Stromwerk-Session_0050-2018.08.18-krt-was-rki-ast-frn/data/0050E-Lamour Crossways/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0050" data-trackindex="F" src="data/Stromwerk-Session_0050-2018.08.18-krt-was-rki-ast-frn/data/0050F-Enourmous Guidance/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0050" data-trackindex="G" src="data/Stromwerk-Session_0050-2018.08.18-krt-was-rki-ast-frn/data/0050G-Ultimate Portal/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0050" data-trackindex="H" src="data/Stromwerk-Session_0050-2018.08.18-krt-was-rki-ast-frn/data/0050H-Grand Am Bumper/data/audio/../config.js"></script>
+
+
+
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0049" data-trackindex="A" src="data/Stromwerk-Session_0049-2018.08.11-krt-was-jny-rzb-phg/data/0049A-Mahogany Gal/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0049" data-trackindex="B" src="data/Stromwerk-Session_0049-2018.08.11-krt-was-jny-rzb-phg/data/0049B-Downtown Divorcee/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0049" data-trackindex="C" src="data/Stromwerk-Session_0049-2018.08.11-krt-was-jny-rzb-phg/data/0049C-Kerouac Bikini Wax/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0049" data-trackindex="D" src="data/Stromwerk-Session_0049-2018.08.11-krt-was-jny-rzb-phg/data/0049D-Wirtshaus Castaway/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0049" data-trackindex="E" src="data/Stromwerk-Session_0049-2018.08.11-krt-was-jny-rzb-phg/data/0049E-Doritos Mistress/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0049" data-trackindex="F" src="data/Stromwerk-Session_0049-2018.08.11-krt-was-jny-rzb-phg/data/0049F-Boleyn Bitch/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0049" data-trackindex="G" src="data/Stromwerk-Session_0049-2018.08.11-krt-was-jny-rzb-phg/data/0049G-Klonopin Mistress/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0049" data-trackindex="H" src="data/Stromwerk-Session_0049-2018.08.11-krt-was-jny-rzb-phg/data/0049H-Desaster Smiles/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0049" data-trackindex="I" src="data/Stromwerk-Session_0049-2018.08.11-krt-was-jny-rzb-phg/data/0049I-Park Avenue Runaway/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0049" data-trackindex="J" src="data/Stromwerk-Session_0049-2018.08.11-krt-was-jny-rzb-phg/data/0049J-Straight Engine/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0049" data-trackindex="K" src="data/Stromwerk-Session_0049-2018.08.11-krt-was-jny-rzb-phg/data/0049K-Croissant Jailbait/data/audio/../config.js"></script>
+
+
+
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0048" data-trackindex="A" src="data/Stromwerk-Session_0048-2018.08.04-krt-was-ast-frn-jny/data/0048A-Banana Synesthesia/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0048" data-trackindex="B" src="data/Stromwerk-Session_0048-2018.08.04-krt-was-ast-frn-jny/data/0048B-Ragtime Erotica/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0048" data-trackindex="C" src="data/Stromwerk-Session_0048-2018.08.04-krt-was-ast-frn-jny/data/0048C-Bergdorf Nightmare/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0048" data-trackindex="D" src="data/Stromwerk-Session_0048-2018.08.04-krt-was-ast-frn-jny/data/0048D-Onassis Salon/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0048" data-trackindex="E" src="data/Stromwerk-Session_0048-2018.08.04-krt-was-ast-frn-jny/data/0048E-Onassis Daddy/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0048" data-trackindex="F" src="data/Stromwerk-Session_0048-2018.08.04-krt-was-ast-frn-jny/data/0048F-Desaster Pansexual/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0048" data-trackindex="G" src="data/Stromwerk-Session_0048-2018.08.04-krt-was-ast-frn-jny/data/0048G-Palm Beach Dame/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0048" data-trackindex="H" src="data/Stromwerk-Session_0048-2018.08.04-krt-was-ast-frn-jny/data/0048H-Ketamine Indulgence/data/audio/../config.js"></script>
+
+
+
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0047" data-trackindex="A" src="data/Stromwerk-Session_0047-2018.07.21-was-rki-frn-jny-car/data/0047A-Sepia Widow/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0047" data-trackindex="B" src="data/Stromwerk-Session_0047-2018.07.21-was-rki-frn-jny-car/data/0047B-Pasadena Selfies/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0047" data-trackindex="C" src="data/Stromwerk-Session_0047-2018.07.21-was-rki-frn-jny-car/data/0047C-Bad Fighter/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0047" data-trackindex="D" src="data/Stromwerk-Session_0047-2018.07.21-was-rki-frn-jny-car/data/0047D-Amagansett Crucifix/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0047" data-trackindex="E" src="data/Stromwerk-Session_0047-2018.07.21-was-rki-frn-jny-car/data/0047E-Raw Foreplay/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0047" data-trackindex="F" src="data/Stromwerk-Session_0047-2018.07.21-was-rki-frn-jny-car/data/0047F-Four Seasons Monkey/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0047" data-trackindex="G" src="data/Stromwerk-Session_0047-2018.07.21-was-rki-frn-jny-car/data/0047G-Public Pharmacy/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0047" data-trackindex="H" src="data/Stromwerk-Session_0047-2018.07.21-was-rki-frn-jny-car/data/0047H-Hydroponic Bronzer/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0047" data-trackindex="I" src="data/Stromwerk-Session_0047-2018.07.21-was-rki-frn-jny-car/data/0047I-Innocent Dame/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0047" data-trackindex="J" src="data/Stromwerk-Session_0047-2018.07.21-was-rki-frn-jny-car/data/0047J-Bourbon Dependency/data/audio/../config.js"></script>
+
+
+
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0046" data-trackindex="A" src="data/Stromwerk-Session_0046-2018.06.16-was-rki-ast-frn-wui-car/data/0046A-Hamptons Synesthesia/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0046" data-trackindex="B" src="data/Stromwerk-Session_0046-2018.06.16-was-rki-ast-frn-wui-car/data/0046B-Sunset Massacre/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0046" data-trackindex="C" src="data/Stromwerk-Session_0046-2018.06.16-was-rki-ast-frn-wui-car/data/0046C-Sepia Cuckold/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0046" data-trackindex="D" src="data/Stromwerk-Session_0046-2018.06.16-was-rki-ast-frn-wui-car/data/0046D-Monochrome Debutante/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0046" data-trackindex="E" src="data/Stromwerk-Session_0046-2018.06.16-was-rki-ast-frn-wui-car/data/0046E-Taliban Massacre/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0046" data-trackindex="F" src="data/Stromwerk-Session_0046-2018.06.16-was-rki-ast-frn-wui-car/data/0046F-Four Seasons Grand Dame/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0046" data-trackindex="G" src="data/Stromwerk-Session_0046-2018.06.16-was-rki-ast-frn-wui-car/data/0046G-Whiskey Tryst/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0046" data-trackindex="H" src="data/Stromwerk-Session_0046-2018.06.16-was-rki-ast-frn-wui-car/data/0046H-Bourbon Celluloid/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0046" data-trackindex="I" src="data/Stromwerk-Session_0046-2018.06.16-was-rki-ast-frn-wui-car/data/0046I-Marrakesh Asphyxiation/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0046" data-trackindex="J" src="data/Stromwerk-Session_0046-2018.06.16-was-rki-ast-frn-wui-car/data/0046J-Juarez Noir/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0046" data-trackindex="K" src="data/Stromwerk-Session_0046-2018.06.16-was-rki-ast-frn-wui-car/data/0046K-Buffalo Sine/data/audio/../config.js"></script>
+
+
+
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0045" data-trackindex="A" src="data/Stromwerk-Session_0045-2018.06.09-was-rki-frn/data/0045A-Ponzi Scheme Dependency/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0045" data-trackindex="B" src="data/Stromwerk-Session_0045-2018.06.09-was-rki-frn/data/0045B-Cherry Smiles/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0045" data-trackindex="C" src="data/Stromwerk-Session_0045-2018.06.09-was-rki-frn/data/0045C-Harvard Sexts/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0045" data-trackindex="D" src="data/Stromwerk-Session_0045-2018.06.09-was-rki-frn/data/0045D-Diamond Noon/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0045" data-trackindex="E" src="data/Stromwerk-Session_0045-2018.06.09-was-rki-frn/data/0045E-Yale Bronzer/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0045" data-trackindex="F" src="data/Stromwerk-Session_0045-2018.06.09-was-rki-frn/data/0045F-In-n-out Appleseed/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0045" data-trackindex="G" src="data/Stromwerk-Session_0045-2018.06.09-was-rki-frn/data/0045G-Sepia Crucifix/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0045" data-trackindex="H" src="data/Stromwerk-Session_0045-2018.06.09-was-rki-frn/data/0045H-Banana Smiles/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0045" data-trackindex="I" src="data/Stromwerk-Session_0045-2018.06.09-was-rki-frn/data/0045I-Interludiloti/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0045" data-trackindex="J" src="data/Stromwerk-Session_0045-2018.06.09-was-rki-frn/data/0045J-Taliban Widow/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0045" data-trackindex="K" src="data/Stromwerk-Session_0045-2018.06.09-was-rki-frn/data/0045K-Four Seasons Casket/data/audio/../config.js"></script>
+
+
+
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0044" data-trackindex="A" src="data/Stromwerk-Session_0044-2018.05.26-was-rki-frn-car/data/0044A-Ghetto Mistress/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0044" data-trackindex="B" src="data/Stromwerk-Session_0044-2018.05.26-was-rki-frn-car/data/0044B-Scarlet Rehab/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0044" data-trackindex="C" src="data/Stromwerk-Session_0044-2018.05.26-was-rki-frn-car/data/0044C-Klonopin Rapture/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0044" data-trackindex="D" src="data/Stromwerk-Session_0044-2018.05.26-was-rki-frn-car/data/0044D-John Wayne Gacy Irie/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0044" data-trackindex="E" src="data/Stromwerk-Session_0044-2018.05.26-was-rki-frn-car/data/0044E-Super Fighter/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0044" data-trackindex="F" src="data/Stromwerk-Session_0044-2018.05.26-was-rki-frn-car/data/0044F-Fine Dependency/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0044" data-trackindex="G" src="data/Stromwerk-Session_0044-2018.05.26-was-rki-frn-car/data/0044G-Patty Hearst Fourth/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0044" data-trackindex="H" src="data/Stromwerk-Session_0044-2018.05.26-was-rki-frn-car/data/0044H-Lobster Roll Wealth/data/audio/../config.js"></script>
+
+
+
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0043" data-trackindex="A" src="data/Stromwerk-Session_0043-2018.05.10-was-rki-pet-wui/data/0043A-Lamour Orchid/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0043" data-trackindex="B" src="data/Stromwerk-Session_0043-2018.05.10-was-rki-pet-wui/data/0043B-Sharon Tate Runaway/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0043" data-trackindex="C" src="data/Stromwerk-Session_0043-2018.05.10-was-rki-pet-wui/data/0043C-Ghetto Chalet/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0043" data-trackindex="D" src="data/Stromwerk-Session_0043-2018.05.10-was-rki-pet-wui/data/0043D-Afghan Noir/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0043" data-trackindex="E" src="data/Stromwerk-Session_0043-2018.05.10-was-rki-pet-wui/data/0043E-Weimar Jabba/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0043" data-trackindex="F" src="data/Stromwerk-Session_0043-2018.05.10-was-rki-pet-wui/data/0043F-Downtown Soiree/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0043" data-trackindex="G" src="data/Stromwerk-Session_0043-2018.05.10-was-rki-pet-wui/data/0043G-Croissant Sugar Baby/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0043" data-trackindex="H" src="data/Stromwerk-Session_0043-2018.05.10-was-rki-pet-wui/data/0043H-Bushwick Sine/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0043" data-trackindex="I" src="data/Stromwerk-Session_0043-2018.05.10-was-rki-pet-wui/data/0043I-Ophelia Bikini Wax/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0043" data-trackindex="J" src="data/Stromwerk-Session_0043-2018.05.10-was-rki-pet-wui/data/0043J-Euro Persona/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0043" data-trackindex="K" src="data/Stromwerk-Session_0043-2018.05.10-was-rki-pet-wui/data/0043K-Mustang Pansexual/data/audio/../config.js"></script>
+
+
+
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0042" data-trackindex="A" src="data/Stromwerk-Session_0042-2018.05.05-was-rki-ast/data/0042A-Neo-realist Tryst/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0042" data-trackindex="B" src="data/Stromwerk-Session_0042-2018.05.05-was-rki-ast/data/0042B-Blackened Regatta/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0042" data-trackindex="C" src="data/Stromwerk-Session_0042-2018.05.05-was-rki-ast/data/0042C-Lucifers Whore/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0042" data-trackindex="D" src="data/Stromwerk-Session_0042-2018.05.05-was-rki-ast/data/0042D-Aztec Sine/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0042" data-trackindex="E" src="data/Stromwerk-Session_0042-2018.05.05-was-rki-ast/data/0042E-Neo-realist Darling/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0042" data-trackindex="F" src="data/Stromwerk-Session_0042-2018.05.05-was-rki-ast/data/0042F-Shotgun Sine/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0042" data-trackindex="G" src="data/Stromwerk-Session_0042-2018.05.05-was-rki-ast/data/0042G-Mustang Water/data/audio/../config.js"></script>
+
+
+
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0041" data-trackindex="A" src="data/Stromwerk-Session_0041-2018.04.29-was-ast-frn-rzb-wui-man-car/data/0041A-Jade Heroine/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0041" data-trackindex="B" src="data/Stromwerk-Session_0041-2018.04.29-was-ast-frn-rzb-wui-man-car/data/0041B-Swarovski Jabba/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0041" data-trackindex="C" src="data/Stromwerk-Session_0041-2018.04.29-was-ast-frn-rzb-wui-man-car/data/0041C-Perfect Ottoman/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0041" data-trackindex="D" src="data/Stromwerk-Session_0041-2018.04.29-was-ast-frn-rzb-wui-man-car/data/0041D-Upper East Side Indulgence/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0041" data-trackindex="E" src="data/Stromwerk-Session_0041-2018.04.29-was-ast-frn-rzb-wui-man-car/data/0041E-Fire Island Dysmorphia/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0041" data-trackindex="F" src="data/Stromwerk-Session_0041-2018.04.29-was-ast-frn-rzb-wui-man-car/data/0041F-Enourmous Selfies/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0041" data-trackindex="G" src="data/Stromwerk-Session_0041-2018.04.29-was-ast-frn-rzb-wui-man-car/data/0041G-Mulholland Seance/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0041" data-trackindex="H" src="data/Stromwerk-Session_0041-2018.04.29-was-ast-frn-rzb-wui-man-car/data/0041H-Warhol Dependency/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0041" data-trackindex="I" src="data/Stromwerk-Session_0041-2018.04.29-was-ast-frn-rzb-wui-man-car/data/0041I-Red Hook Suspiria/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0041" data-trackindex="J" src="data/Stromwerk-Session_0041-2018.04.29-was-ast-frn-rzb-wui-man-car/data/0041J-Hydroponic Whore/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0041" data-trackindex="K" src="data/Stromwerk-Session_0041-2018.04.29-was-ast-frn-rzb-wui-man-car/data/0041K-Bushwick Poetry/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0041" data-trackindex="L" src="data/Stromwerk-Session_0041-2018.04.29-was-ast-frn-rzb-wui-man-car/data/0041L-Bardot Seance/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0041" data-trackindex="M" src="data/Stromwerk-Session_0041-2018.04.29-was-ast-frn-rzb-wui-man-car/data/0041M-Moet Jailbait/data/audio/../config.js"></script>
+
+
+
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0040" data-trackindex="A" src="data/Stromwerk-Session_0040-2018.04.28-was-rzb-sei-car-est/data/0040A-Beignet Pansexual/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0040" data-trackindex="B" src="data/Stromwerk-Session_0040-2018.04.28-was-rzb-sei-car-est/data/0040B-Madison Avenue Bondage/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0040" data-trackindex="C" src="data/Stromwerk-Session_0040-2018.04.28-was-rzb-sei-car-est/data/0040C-Deep Seance/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0040" data-trackindex="D" src="data/Stromwerk-Session_0040-2018.04.28-was-rzb-sei-car-est/data/0040D-Weimar Truck Stop/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0040" data-trackindex="E" src="data/Stromwerk-Session_0040-2018.04.28-was-rzb-sei-car-est/data/0040E-Clam Bake Romance/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0040" data-trackindex="F" src="data/Stromwerk-Session_0040-2018.04.28-was-rzb-sei-car-est/data/0040F-Opioid Bluntwraps/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0040" data-trackindex="G" src="data/Stromwerk-Session_0040-2018.04.28-was-rzb-sei-car-est/data/0040G-Dark Bulimia/data/audio/../config.js"></script>
+
+
+
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0039" data-trackindex="A" src="data/Stromwerk-Session_0039-2018.04.01-was-rki-ast-frn-wui/data/0039A-Patty Hearst Harlot/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0039" data-trackindex="B" src="data/Stromwerk-Session_0039-2018.04.01-was-rki-ast-frn-wui/data/0039B-Jade Cuckold/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0039" data-trackindex="C" src="data/Stromwerk-Session_0039-2018.04.01-was-rki-ast-frn-wui/data/0039C-Beignet Daydreams/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0039" data-trackindex="D" src="data/Stromwerk-Session_0039-2018.04.01-was-rki-ast-frn-wui/data/0039D-Cape Cod Chalet/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0039" data-trackindex="E" src="data/Stromwerk-Session_0039-2018.04.01-was-rki-ast-frn-wui/data/0039E-Moet Seance/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0039" data-trackindex="F" src="data/Stromwerk-Session_0039-2018.04.01-was-rki-ast-frn-wui/data/0039F-Perfect Bloodbath/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0039" data-trackindex="G" src="data/Stromwerk-Session_0039-2018.04.01-was-rki-ast-frn-wui/data/0039G-Wirtshaus Melodrama/data/audio/../config.js"></script>
+
+
+
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0038" data-trackindex="A" src="data/Stromwerk-Session_0038-2018.03.24-was-rki-ast/data/0038A-Buffalo Noon/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0038" data-trackindex="B" src="data/Stromwerk-Session_0038-2018.03.24-was-rki-ast/data/0038B-Vogue Bleach/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0038" data-trackindex="C" src="data/Stromwerk-Session_0038-2018.03.24-was-rki-ast/data/0038C-Dewy Erotica/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0038" data-trackindex="D" src="data/Stromwerk-Session_0038-2018.03.24-was-rki-ast/data/0038D-Ultimate Cuckold/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0038" data-trackindex="E" src="data/Stromwerk-Session_0038-2018.03.24-was-rki-ast/data/0038E-Macaron Fighter/data/audio/../config.js"></script>
+
+
+
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0037" data-trackindex="A" src="data/Stromwerk-Session_0037-2018.03.17-was-rki-ast-frn-jny-wui-sei/data/0037A-Beignet Noir/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0037" data-trackindex="B" src="data/Stromwerk-Session_0037-2018.03.17-was-rki-ast-frn-jny-wui-sei/data/0037B-Kubrick Boheme/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0037" data-trackindex="C" src="data/Stromwerk-Session_0037-2018.03.17-was-rki-ast-frn-jny-wui-sei/data/0037C-Old-money Hunny/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0037" data-trackindex="D" src="data/Stromwerk-Session_0037-2018.03.17-was-rki-ast-frn-jny-wui-sei/data/0037D-Biscotti Bitch/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0037" data-trackindex="E" src="data/Stromwerk-Session_0037-2018.03.17-was-rki-ast-frn-jny-wui-sei/data/0037E-Quadrant Nine/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0037" data-trackindex="F" src="data/Stromwerk-Session_0037-2018.03.17-was-rki-ast-frn-jny-wui-sei/data/0037F-Lotis Rising/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0037" data-trackindex="G" src="data/Stromwerk-Session_0037-2018.03.17-was-rki-ast-frn-jny-wui-sei/data/0037G-Ponzi Scheme Porno/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0037" data-trackindex="H" src="data/Stromwerk-Session_0037-2018.03.17-was-rki-ast-frn-jny-wui-sei/data/0037H-Terrorzelle/data/audio/../config.js"></script>
+
+
+
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0036" data-trackindex="A" src="data/Stromwerk-Session_0036-2018.03.10-was-rki-frn-and/data/0036A-Cognac Castaway/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0036" data-trackindex="B" src="data/Stromwerk-Session_0036-2018.03.10-was-rki-frn-and/data/0036B-Innocent Harlot/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0036" data-trackindex="C" src="data/Stromwerk-Session_0036-2018.03.10-was-rki-frn-and/data/0036C-Soft-serve Dependency/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0036" data-trackindex="D" src="data/Stromwerk-Session_0036-2018.03.10-was-rki-frn-and/data/0036D-Bourbon Heroine/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0036" data-trackindex="E" src="data/Stromwerk-Session_0036-2018.03.10-was-rki-frn-and/data/0036E-Euro Mistress/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0036" data-trackindex="F" src="data/Stromwerk-Session_0036-2018.03.10-was-rki-frn-and/data/0036F-Hydroponic Tiki Shack/data/audio/../config.js"></script>
+
+
+
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0035" data-trackindex="A" src="data/Stromwerk-Session_0035-2018.02.25-was-rki-wui/data/0035A-Marfa Bitch/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0035" data-trackindex="B" src="data/Stromwerk-Session_0035-2018.02.25-was-rki-wui/data/0035B-Alamo Pedestrian/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0035" data-trackindex="C" src="data/Stromwerk-Session_0035-2018.02.25-was-rki-wui/data/0035C-Harvard Erotica/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0035" data-trackindex="D" src="data/Stromwerk-Session_0035-2018.02.25-was-rki-wui/data/0035D-El Camino Tattoo/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0035" data-trackindex="E" src="data/Stromwerk-Session_0035-2018.02.25-was-rki-wui/data/0035E-Pasadena Chalet/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0035" data-trackindex="F" src="data/Stromwerk-Session_0035-2018.02.25-was-rki-wui/data/0035F-Heroin Gal/data/audio/../config.js"></script>
+
+
+
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0034" data-trackindex="A" src="data/Stromwerk-Session_0034-2018.02.08-was-rki-ast-frn-dav/data/0034A-Aztec Bitch/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0034" data-trackindex="B" src="data/Stromwerk-Session_0034-2018.02.08-was-rki-ast-frn-dav/data/0034B-Clam Bake Regatta/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0034" data-trackindex="C" src="data/Stromwerk-Session_0034-2018.02.08-was-rki-ast-frn-dav/data/0034C-Green Point Wealth/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0034" data-trackindex="D" src="data/Stromwerk-Session_0034-2018.02.08-was-rki-ast-frn-dav/data/0034D-Waco Dysmorphia/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0034" data-trackindex="E" src="data/Stromwerk-Session_0034-2018.02.08-was-rki-ast-frn-dav/data/0034E-Mahogany Orchid/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0034" data-trackindex="F" src="data/Stromwerk-Session_0034-2018.02.08-was-rki-ast-frn-dav/data/0034F-Everglades Bluntwraps/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0034" data-trackindex="G" src="data/Stromwerk-Session_0034-2018.02.08-was-rki-ast-frn-dav/data/0034G-Spoiled Delinquent/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0034" data-trackindex="H" src="data/Stromwerk-Session_0034-2018.02.08-was-rki-ast-frn-dav/data/0034H-Westward Porno/data/audio/../config.js"></script>
+
+
+
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0033" data-trackindex="A" src="data/Stromwerk-Session_0033-2018.02.01-was-rki-ast/data/0033A-Ritz Carlton Bloodbath/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0033" data-trackindex="B" src="data/Stromwerk-Session_0033-2018.02.01-was-rki-ast/data/0033B-Waco Squarewave/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0033" data-trackindex="C" src="data/Stromwerk-Session_0033-2018.02.01-was-rki-ast/data/0033C-Neo-realist Bloodbath/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0033" data-trackindex="D" src="data/Stromwerk-Session_0033-2018.02.01-was-rki-ast/data/0033D-French Quarter Bronzer/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0033" data-trackindex="E" src="data/Stromwerk-Session_0033-2018.02.01-was-rki-ast/data/0033E-Sepia Bulimia/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0033" data-trackindex="F" src="data/Stromwerk-Session_0033-2018.02.01-was-rki-ast/data/0033F-Yacht Club Fighter/data/audio/../config.js"></script>
+
+
+
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0032" data-trackindex="A" src="data/Stromwerk-Session_0032-2018.01.13-was-rki-frn-and-sei/data/0032A-Biscotti Bluntwraps/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0032" data-trackindex="B" src="data/Stromwerk-Session_0032-2018.01.13-was-rki-frn-and-sei/data/0032B-In-n-out Orchid/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0032" data-trackindex="C" src="data/Stromwerk-Session_0032-2018.01.13-was-rki-frn-and-sei/data/0032C-Disco Tiki Shack/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0032" data-trackindex="D" src="data/Stromwerk-Session_0032-2018.01.13-was-rki-frn-and-sei/data/0032D-El Camino Magnolia/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0032" data-trackindex="E" src="data/Stromwerk-Session_0032-2018.01.13-was-rki-frn-and-sei/data/0032E-Hydroponic Selfies/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0032" data-trackindex="F" src="data/Stromwerk-Session_0032-2018.01.13-was-rki-frn-and-sei/data/0032F-Whiskey Brunch/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0032" data-trackindex="G" src="data/Stromwerk-Session_0032-2018.01.13-was-rki-frn-and-sei/data/0032G-Vaudevillian Bungalow/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0032" data-trackindex="H" src="data/Stromwerk-Session_0032-2018.01.13-was-rki-frn-and-sei/data/0032H-Austin Synesthesia/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0032" data-trackindex="I" src="data/Stromwerk-Session_0032-2018.01.13-was-rki-frn-and-sei/data/0032I-Ponzi Scheme Boudoir/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0032" data-trackindex="J" src="data/Stromwerk-Session_0032-2018.01.13-was-rki-frn-and-sei/data/0032J-Scarlet Grand Dame/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0032" data-trackindex="K" src="data/Stromwerk-Session_0032-2018.01.13-was-rki-frn-and-sei/data/0032K-Opioid Tattoo/data/audio/../config.js"></script>
+
+
+
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0031" data-trackindex="A" src="data/Stromwerk-Session_0031-2018.01.06-was-rki-rzb-and-sei/data/0031A-Disco Bloodbath/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0031" data-trackindex="B" src="data/Stromwerk-Session_0031-2018.01.06-was-rki-rzb-and-sei/data/0031B-Ragged Delinquent/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0031" data-trackindex="C" src="data/Stromwerk-Session_0031-2018.01.06-was-rki-rzb-and-sei/data/0031C-Blackened Persona/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0031" data-trackindex="D" src="data/Stromwerk-Session_0031-2018.01.06-was-rki-rzb-and-sei/data/0031D-Kennedy Tanning Salon/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0031" data-trackindex="E" src="data/Stromwerk-Session_0031-2018.01.06-was-rki-rzb-and-sei/data/0031E-Westward Indulgence/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0031" data-trackindex="F" src="data/Stromwerk-Session_0031-2018.01.06-was-rki-rzb-and-sei/data/0031F-Yacht Club Bleach/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0031" data-trackindex="G" src="data/Stromwerk-Session_0031-2018.01.06-was-rki-rzb-and-sei/data/0031G-Quahog Selfies/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0031" data-trackindex="H" src="data/Stromwerk-Session_0031-2018.01.06-was-rki-rzb-and-sei/data/0031H-Mulholland Tiki Shack/data/audio/../config.js"></script>
+
+
+
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0030" data-trackindex="A" src="data/Stromwerk-Session_0030-2017.12.30-was-rki-max-mik/data/0030A-Patty Hearst Regatta/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0030" data-trackindex="B" src="data/Stromwerk-Session_0030-2017.12.30-was-rki-max-mik/data/0030B-Fire Island Heroine/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0030" data-trackindex="C" src="data/Stromwerk-Session_0030-2017.12.30-was-rki-max-mik/data/0030C-Breezy Bitch/data/audio/../config.js"></script>
+
+
+
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0029" data-trackindex="A" src="data/Stromwerk-Session_0029-2017.12.25-was-wui-hol-sei/data/0029A-The Blessing/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0029" data-trackindex="B" src="data/Stromwerk-Session_0029-2017.12.25-was-wui-hol-sei/data/0029B-Ponzi Scheme Dysmorphia/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0029" data-trackindex="C" src="data/Stromwerk-Session_0029-2017.12.25-was-wui-hol-sei/data/0029C-Austin Synesthesia/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0029" data-trackindex="D" src="data/Stromwerk-Session_0029-2017.12.25-was-wui-hol-sei/data/0029D-Amagansett Ottoman/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0029" data-trackindex="E" src="data/Stromwerk-Session_0029-2017.12.25-was-wui-hol-sei/data/0029E-Warhol Murder/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0029" data-trackindex="F" src="data/Stromwerk-Session_0029-2017.12.25-was-wui-hol-sei/data/0029F-Sazerac Tryst/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0029" data-trackindex="G" src="data/Stromwerk-Session_0029-2017.12.25-was-wui-hol-sei/data/0029G-Super Mistress/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0029" data-trackindex="H" src="data/Stromwerk-Session_0029-2017.12.25-was-wui-hol-sei/data/0029H-Fire Island Boudoir/data/audio/../config.js"></script>
+
+
+
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0028" data-trackindex="A" src="data/Stromwerk-Session_0028-2017.12.09-was-rki/data/0028A-Berlin Nursery/data/audio/../config.js"></script>
+
+
+
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0027" data-trackindex="A" src="data/Stromwerk-Session_0027-2017.11.25-krt-was-rki-rzb-wui/data/0027A-Sazerac Bitch/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0027" data-trackindex="B" src="data/Stromwerk-Session_0027-2017.11.25-krt-was-rki-rzb-wui/data/0027B-Boleyn Bungalow/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0027" data-trackindex="C" src="data/Stromwerk-Session_0027-2017.11.25-krt-was-rki-rzb-wui/data/0027C-Kubrick Pansexual/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0027" data-trackindex="D" src="data/Stromwerk-Session_0027-2017.11.25-krt-was-rki-rzb-wui/data/0027D-Vogue Bisoux/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0027" data-trackindex="E" src="data/Stromwerk-Session_0027-2017.11.25-krt-was-rki-rzb-wui/data/0027E-Raw Bitch/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0027" data-trackindex="F" src="data/Stromwerk-Session_0027-2017.11.25-krt-was-rki-rzb-wui/data/0027F-Dewy Divorcee/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0027" data-trackindex="G" src="data/Stromwerk-Session_0027-2017.11.25-krt-was-rki-rzb-wui/data/0027G-Whiskey Gemstones/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0027" data-trackindex="H" src="data/Stromwerk-Session_0027-2017.11.25-krt-was-rki-rzb-wui/data/0027H-Grand Am Boheme/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0027" data-trackindex="I" src="data/Stromwerk-Session_0027-2017.11.25-krt-was-rki-rzb-wui/data/0027I-Boleyn Noir/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0027" data-trackindex="J" src="data/Stromwerk-Session_0027-2017.11.25-krt-was-rki-rzb-wui/data/0027J-Opioid Tryst/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0027" data-trackindex="K" src="data/Stromwerk-Session_0027-2017.11.25-krt-was-rki-rzb-wui/data/0027K-Madison Avenue Dame/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0027" data-trackindex="L" src="data/Stromwerk-Session_0027-2017.11.25-krt-was-rki-rzb-wui/data/0027L-Downtown Schooner/data/audio/../config.js"></script>
+
+
+
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0026" data-trackindex="A" src="data/Stromwerk-Session_0026-2017.11.18-krt-rki-ast-luk-was-luk-pet/data/0026A-Fine Melodrama/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0026" data-trackindex="B" src="data/Stromwerk-Session_0026-2017.11.18-krt-rki-ast-luk-was-luk-pet/data/0026B-Crystalline Heroine/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0026" data-trackindex="C" src="data/Stromwerk-Session_0026-2017.11.18-krt-rki-ast-luk-was-luk-pet/data/0026C-Hamptons Wealth/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0026" data-trackindex="D" src="data/Stromwerk-Session_0026-2017.11.18-krt-rki-ast-luk-was-luk-pet/data/0026D-Super Rehab/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0026" data-trackindex="E" src="data/Stromwerk-Session_0026-2017.11.18-krt-rki-ast-luk-was-luk-pet/data/0026E-Beignet Porno/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0026" data-trackindex="F" src="data/Stromwerk-Session_0026-2017.11.18-krt-rki-ast-luk-was-luk-pet/data/0026F-Onassis Erotica/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0026" data-trackindex="G" src="data/Stromwerk-Session_0026-2017.11.18-krt-rki-ast-luk-was-luk-pet/data/0026G-Acid Dominatrix/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0026" data-trackindex="H" src="data/Stromwerk-Session_0026-2017.11.18-krt-rki-ast-luk-was-luk-pet/data/0026H-Cliquot Hunny/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0026" data-trackindex="I" src="data/Stromwerk-Session_0026-2017.11.18-krt-rki-ast-luk-was-luk-pet/data/0026I-Lolita Ladykiller/data/audio/../config.js"></script>
+
+
+
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0025" data-trackindex="A" src="data/Stromwerk-Session_0025-2017.11.12-krt-was-rki-ast/data/0025A-Mulholland Bronzer/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0025" data-trackindex="B" src="data/Stromwerk-Session_0025-2017.11.12-krt-was-rki-ast/data/0025B-Crystalline Erotica/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0025" data-trackindex="C" src="data/Stromwerk-Session_0025-2017.11.12-krt-was-rki-ast/data/0025C-Circus Maximus/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0025" data-trackindex="D" src="data/Stromwerk-Session_0025-2017.11.12-krt-was-rki-ast/data/0025D-Quahog Boheme/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0025" data-trackindex="E" src="data/Stromwerk-Session_0025-2017.11.12-krt-was-rki-ast/data/0025E-Moet Orchid/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0025" data-trackindex="F" src="data/Stromwerk-Session_0025-2017.11.12-krt-was-rki-ast/data/0025F-Sazerac Bondage/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0025" data-trackindex="G" src="data/Stromwerk-Session_0025-2017.11.12-krt-was-rki-ast/data/0025G-Breezy Repulsion/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0025" data-trackindex="H" src="data/Stromwerk-Session_0025-2017.11.12-krt-was-rki-ast/data/0025H-Bad Gazebo/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0025" data-trackindex="I" src="data/Stromwerk-Session_0025-2017.11.12-krt-was-rki-ast/data/0025I-Kool Aid Disco/data/audio/../config.js"></script>
+
+
+
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0024" data-trackindex="A" src="data/Stromwerk-Session_0024-2017.10.28-krt-was-ast-rzb-guests/data/0024A-Spoiled Misery/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0024" data-trackindex="B" src="data/Stromwerk-Session_0024-2017.10.28-krt-was-ast-rzb-guests/data/0024B-Grand Canyon Pansexual/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0024" data-trackindex="C" src="data/Stromwerk-Session_0024-2017.10.28-krt-was-ast-rzb-guests/data/0024C-Warhol Truck Stop/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0024" data-trackindex="D" src="data/Stromwerk-Session_0024-2017.10.28-krt-was-ast-rzb-guests/data/0024D-Nutella Mistress/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0024" data-trackindex="E" src="data/Stromwerk-Session_0024-2017.10.28-krt-was-ast-rzb-guests/data/0024E-Fire Island Castaway/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0024" data-trackindex="F" src="data/Stromwerk-Session_0024-2017.10.28-krt-was-ast-rzb-guests/data/0024F-Grand Canyon Noir/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0024" data-trackindex="G" src="data/Stromwerk-Session_0024-2017.10.28-krt-was-ast-rzb-guests/data/0024G-In-n-out Sine/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0024" data-trackindex="H" src="data/Stromwerk-Session_0024-2017.10.28-krt-was-ast-rzb-guests/data/0024H-Boleyn Tiki Shack/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0024" data-trackindex="I" src="data/Stromwerk-Session_0024-2017.10.28-krt-was-ast-rzb-guests/data/0024I-Bergdorf Erotica/data/audio/../config.js"></script>
+
+
+
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0023" data-trackindex="A" src="data/Stromwerk-Session_0023-2017.10.26-krt-was-rki-ast-rzb/data/0023A-Weimar Asphyxiation/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0023" data-trackindex="B" src="data/Stromwerk-Session_0023-2017.10.26-krt-was-rki-ast-rzb/data/0023B-Pasadena Regatta/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0023" data-trackindex="C" src="data/Stromwerk-Session_0023-2017.10.26-krt-was-rki-ast-rzb/data/0023C-Austin Tiki Shack/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0023" data-trackindex="D" src="data/Stromwerk-Session_0023-2017.10.26-krt-was-rki-ast-rzb/data/0023D-Cognac Shotgun/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0023" data-trackindex="E" src="data/Stromwerk-Session_0023-2017.10.26-krt-was-rki-ast-rzb/data/0023E-Dewy Castaway/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0023" data-trackindex="F" src="data/Stromwerk-Session_0023-2017.10.26-krt-was-rki-ast-rzb/data/0023F-Ketamine Brunch/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0023" data-trackindex="G" src="data/Stromwerk-Session_0023-2017.10.26-krt-was-rki-ast-rzb/data/0023G-Madison Avenue Tattoo/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0023" data-trackindex="H" src="data/Stromwerk-Session_0023-2017.10.26-krt-was-rki-ast-rzb/data/0023H-John Wayne Gacy Cellophane/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0023" data-trackindex="I" src="data/Stromwerk-Session_0023-2017.10.26-krt-was-rki-ast-rzb/data/0023I-Diamond Kisses/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0023" data-trackindex="J" src="data/Stromwerk-Session_0023-2017.10.26-krt-was-rki-ast-rzb/data/0023J-Westward Boudoir/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0023" data-trackindex="K" src="data/Stromwerk-Session_0023-2017.10.26-krt-was-rki-ast-rzb/data/0023K-Ophelia Foreplay/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0023" data-trackindex="L" src="data/Stromwerk-Session_0023-2017.10.26-krt-was-rki-ast-rzb/data/0023L-Klonopin Romance/data/audio/../config.js"></script>
+
+
+
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0022" data-trackindex="A" src="data/Stromwerk-Session_0022-2017.10.08-krt-was-rki/data/0022A-Sharon Tate Rapture/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0022" data-trackindex="B" src="data/Stromwerk-Session_0022-2017.10.08-krt-was-rki/data/0022B-Chloroform Regatta/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0022" data-trackindex="C" src="data/Stromwerk-Session_0022-2017.10.08-krt-was-rki/data/0022C-Juarez Bondage/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0022" data-trackindex="D" src="data/Stromwerk-Session_0022-2017.10.08-krt-was-rki/data/0022D-Cliquot Noir/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0022" data-trackindex="E" src="data/Stromwerk-Session_0022-2017.10.08-krt-was-rki/data/0022E-Green Point Misery/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0022" data-trackindex="F" src="data/Stromwerk-Session_0022-2017.10.08-krt-was-rki/data/0022F-Neo-realist Ladykiller/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0022" data-trackindex="G" src="data/Stromwerk-Session_0022-2017.10.08-krt-was-rki/data/0022G-Spoiled Monkey/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0022" data-trackindex="H" src="data/Stromwerk-Session_0022-2017.10.08-krt-was-rki/data/0022H-Taco Melodrama/data/audio/../config.js"></script>
+
+
+
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0021" data-trackindex="A" src="data/Stromwerk-Session_0021-2017.10.01-krt-was-rki-ast/data/0021A-Wild West Indulgence/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0021" data-trackindex="B" src="data/Stromwerk-Session_0021-2017.10.01-krt-was-rki-ast/data/0021B-Lucifers Massacre/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0021" data-trackindex="C" src="data/Stromwerk-Session_0021-2017.10.01-krt-was-rki-ast/data/0021C-Taco Soiree/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0021" data-trackindex="D" src="data/Stromwerk-Session_0021-2017.10.01-krt-was-rki-ast/data/0021D-Ultimate Chalet/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0021" data-trackindex="E" src="data/Stromwerk-Session_0021-2017.10.01-krt-was-rki-ast/data/0021E-Chandon Dame/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0021" data-trackindex="F" src="data/Stromwerk-Session_0021-2017.10.01-krt-was-rki-ast/data/0021F-Banana Synesthesia/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0021" data-trackindex="G" src="data/Stromwerk-Session_0021-2017.10.01-krt-was-rki-ast/data/0021G-Super Gazebo/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0021" data-trackindex="H" src="data/Stromwerk-Session_0021-2017.10.01-krt-was-rki-ast/data/0021H-Patty Hearst Misery/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0021" data-trackindex="I" src="data/Stromwerk-Session_0021-2017.10.01-krt-was-rki-ast/data/0021I-Wirtshaus Indulgence/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0021" data-trackindex="J" src="data/Stromwerk-Session_0021-2017.10.01-krt-was-rki-ast/data/0021J-Amethyst Schooner/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0021" data-trackindex="K" src="data/Stromwerk-Session_0021-2017.10.01-krt-was-rki-ast/data/0021K-Soft-serve Bulimia/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0021" data-trackindex="L" src="data/Stromwerk-Session_0021-2017.10.01-krt-was-rki-ast/data/0021L-Sepia Dominatrix/data/audio/../config.js"></script>
+
+
+
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0020" data-trackindex="A" src="data/Stromwerk-Session_0020-2017.09-krt-was-ast-guests/data/0020A-John Wayne Gacy Porno/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0020" data-trackindex="B" src="data/Stromwerk-Session_0020-2017.09-krt-was-ast-guests/data/0020B-Pocky Indulgence/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0020" data-trackindex="C" src="data/Stromwerk-Session_0020-2017.09-krt-was-ast-guests/data/0020C-Dark Foreplay/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0020" data-trackindex="D" src="data/Stromwerk-Session_0020-2017.09-krt-was-ast-guests/data/0020D-Raw Squarewave/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0020" data-trackindex="E" src="data/Stromwerk-Session_0020-2017.09-krt-was-ast-guests/data/0020E-Pocky Asphyxiation/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0020" data-trackindex="F" src="data/Stromwerk-Session_0020-2017.09-krt-was-ast-guests/data/0020F-Sepia Chastity/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0020" data-trackindex="G" src="data/Stromwerk-Session_0020-2017.09-krt-was-ast-guests/data/0020G-Ketamine Sugar Baby/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0020" data-trackindex="H" src="data/Stromwerk-Session_0020-2017.09-krt-was-ast-guests/data/0020H-Cape Cod Shotgun/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0020" data-trackindex="I" src="data/Stromwerk-Session_0020-2017.09-krt-was-ast-guests/data/0020I-Clam Bake Kisses/data/audio/../config.js"></script>
+
+
+
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0019.2" data-trackindex="A" src="data/Stromwerk-Session_0019.2-2017.07.16-krt-was-wui-coa-guests/data/0019.2A-Zeus Exile/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0019.2" data-trackindex="B" src="data/Stromwerk-Session_0019.2-2017.07.16-krt-was-wui-coa-guests/data/0019.2B-Everglades Ballgag/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0019.2" data-trackindex="C" src="data/Stromwerk-Session_0019.2-2017.07.16-krt-was-wui-coa-guests/data/0019.2C-Swamp Gum/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0019.2" data-trackindex="D" src="data/Stromwerk-Session_0019.2-2017.07.16-krt-was-wui-coa-guests/data/0019.2D-Elegy/data/audio/../config.js"></script>
+
+
+
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0019.1" data-trackindex="A" src="data/Stromwerk-Session_0019.1-2017.07.16-krt-was-coa-wui-guests/data/0019.1A-Mustang Smiles/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0019.1" data-trackindex="B" src="data/Stromwerk-Session_0019.1-2017.07.16-krt-was-coa-wui-guests/data/0019.1B-Marfa Bisoux/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0019.1" data-trackindex="C" src="data/Stromwerk-Session_0019.1-2017.07.16-krt-was-coa-wui-guests/data/0019.1C-Spoiled Tryst/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0019.1" data-trackindex="D" src="data/Stromwerk-Session_0019.1-2017.07.16-krt-was-coa-wui-guests/data/0019.1D-Chandon Shotgun/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0019.1" data-trackindex="E" src="data/Stromwerk-Session_0019.1-2017.07.16-krt-was-coa-wui-guests/data/0019.1E-Ghetto Magnolia/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0019.1" data-trackindex="F" src="data/Stromwerk-Session_0019.1-2017.07.16-krt-was-coa-wui-guests/data/0019.1F-Park Avenue Romance/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0019.1" data-trackindex="G" src="data/Stromwerk-Session_0019.1-2017.07.16-krt-was-coa-wui-guests/data/0019.1G-Klonopin Bondage/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0019.1" data-trackindex="H" src="data/Stromwerk-Session_0019.1-2017.07.16-krt-was-coa-wui-guests/data/0019.1H-Pocky Dysmorphia/data/audio/../config.js"></script>
+
+
+
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0018" data-trackindex="A" src="data/Stromwerk-Session_0018-2017.07-krt-was-ast-guests/data/0018A-Mustang Bluntwraps/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0018" data-trackindex="B" src="data/Stromwerk-Session_0018-2017.07-krt-was-ast-guests/data/0018B-Opioid Bisoux/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0018" data-trackindex="C" src="data/Stromwerk-Session_0018-2017.07-krt-was-ast-guests/data/0018C-Cape Cod Bitch/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0018" data-trackindex="D" src="data/Stromwerk-Session_0018-2017.07-krt-was-ast-guests/data/0018D-Ragged Daddy/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0018" data-trackindex="E" src="data/Stromwerk-Session_0018-2017.07-krt-was-ast-guests/data/0018E-Public Nightmare/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0018" data-trackindex="F" src="data/Stromwerk-Session_0018-2017.07-krt-was-ast-guests/data/0018F-Ragged Widow/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0018" data-trackindex="G" src="data/Stromwerk-Session_0018-2017.07-krt-was-ast-guests/data/0018G-Acid Dysmorphia/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0018" data-trackindex="H" src="data/Stromwerk-Session_0018-2017.07-krt-was-ast-guests/data/0018H-Ragtime Bleach/data/audio/../config.js"></script>
+
+
+
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0017" data-trackindex="A" src="data/Stromwerk-Session_0017-2017.07-krt-was-ast-guests/data/0017A-Intro/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0017" data-trackindex="B" src="data/Stromwerk-Session_0017-2017.07-krt-was-ast-guests/data/0017B-Kubrick Dependency/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0017" data-trackindex="C" src="data/Stromwerk-Session_0017-2017.07-krt-was-ast-guests/data/0017C-Fire Island Bisoux/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0017" data-trackindex="D" src="data/Stromwerk-Session_0017-2017.07-krt-was-ast-guests/data/0017D-Downtown Smiles/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0017" data-trackindex="E" src="data/Stromwerk-Session_0017-2017.07-krt-was-ast-guests/data/0017E-Taliban Debutante/data/audio/../config.js"></script>
+
+
+
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0016" data-trackindex="A" src="data/Stromwerk-Session_0016-2017.06-krt-was-ast-guests/data/0016A-Old-money Soiree/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0016" data-trackindex="B" src="data/Stromwerk-Session_0016-2017.06-krt-was-ast-guests/data/0016B-Banana Sexts/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0016" data-trackindex="C" src="data/Stromwerk-Session_0016-2017.06-krt-was-ast-guests/data/0016C-Super Melodrama/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0016" data-trackindex="D" src="data/Stromwerk-Session_0016-2017.06-krt-was-ast-guests/data/0016D-Ragged Dame/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0016" data-trackindex="E" src="data/Stromwerk-Session_0016-2017.06-krt-was-ast-guests/data/0016E-Harvard Darling/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0016" data-trackindex="F" src="data/Stromwerk-Session_0016-2017.06-krt-was-ast-guests/data/0016F-Cherry Cellophane/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0016" data-trackindex="G" src="data/Stromwerk-Session_0016-2017.06-krt-was-ast-guests/data/0016G-Fire Island Pedestrian/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0016" data-trackindex="H" src="data/Stromwerk-Session_0016-2017.06-krt-was-ast-guests/data/0016H-Macaron Synesthesia/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0016" data-trackindex="I" src="data/Stromwerk-Session_0016-2017.06-krt-was-ast-guests/data/0016I-John Wayne Gacy Suspiria/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0016" data-trackindex="J" src="data/Stromwerk-Session_0016-2017.06-krt-was-ast-guests/data/0016J-Breezy Suspiria/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0016" data-trackindex="K" src="data/Stromwerk-Session_0016-2017.06-krt-was-ast-guests/data/0016K-Westward Regatta/data/audio/../config.js"></script>
+
+
+
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0015" data-trackindex="A" src="data/Stromwerk-Session_0015-2017.05-krt-was-jny-guests/data/0015A-Mulholland Bungalow/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0015" data-trackindex="B" src="data/Stromwerk-Session_0015-2017.05-krt-was-jny-guests/data/0015B-Grand Am Tiki Shack/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0015" data-trackindex="C" src="data/Stromwerk-Session_0015-2017.05-krt-was-jny-guests/data/0015C-Viva Italy/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0015" data-trackindex="D" src="data/Stromwerk-Session_0015-2017.05-krt-was-jny-guests/data/0015D-Get The Codes/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0015" data-trackindex="E" src="data/Stromwerk-Session_0015-2017.05-krt-was-jny-guests/data/0015E-Alamo Boudoir/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0015" data-trackindex="F" src="data/Stromwerk-Session_0015-2017.05-krt-was-jny-guests/data/0015F-Ghetto Crucifix/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0015" data-trackindex="G" src="data/Stromwerk-Session_0015-2017.05-krt-was-jny-guests/data/0015G-Downtown Rehab/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0015" data-trackindex="H" src="data/Stromwerk-Session_0015-2017.05-krt-was-jny-guests/data/0015H-Texas Ranger/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0015" data-trackindex="I" src="data/Stromwerk-Session_0015-2017.05-krt-was-jny-guests/data/0015I-Blackened Misery/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0015" data-trackindex="J" src="data/Stromwerk-Session_0015-2017.05-krt-was-jny-guests/data/0015J-Patty Hearst Noir/data/audio/../config.js"></script>
+
+
+
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0013" data-trackindex="A" src="data/Stromwerk-Session_0013-2017.05-krt-was-rki-jny-and/data/0013A-Afghan Cellophane/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0013" data-trackindex="B" src="data/Stromwerk-Session_0013-2017.05-krt-was-rki-jny-and/data/0013B-Upper East Side Bronzer/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0013" data-trackindex="C" src="data/Stromwerk-Session_0013-2017.05-krt-was-rki-jny-and/data/0013C-Vogue Bisoux/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0013" data-trackindex="D" src="data/Stromwerk-Session_0013-2017.05-krt-was-rki-jny-and/data/0013D-Sunset Sugar Baby/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0013" data-trackindex="E" src="data/Stromwerk-Session_0013-2017.05-krt-was-rki-jny-and/data/0013E-Pocky Bulimia/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0013" data-trackindex="F" src="data/Stromwerk-Session_0013-2017.05-krt-was-rki-jny-and/data/0013F-Monied Fighter/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0013" data-trackindex="G" src="data/Stromwerk-Session_0013-2017.05-krt-was-rki-jny-and/data/0013G-Bergdorf Bloodbath/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0013" data-trackindex="H" src="data/Stromwerk-Session_0013-2017.05-krt-was-rki-jny-and/data/0013H-Redneck Mordor/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0013" data-trackindex="I" src="data/Stromwerk-Session_0013-2017.05-krt-was-rki-jny-and/data/0013I-Sazerac Love Affair/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0013" data-trackindex="J" src="data/Stromwerk-Session_0013-2017.05-krt-was-rki-jny-and/data/0013J-Hamptons Murder/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0013" data-trackindex="K" src="data/Stromwerk-Session_0013-2017.05-krt-was-rki-jny-and/data/0013K-Green Point Kisses/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0013" data-trackindex="L" src="data/Stromwerk-Session_0013-2017.05-krt-was-rki-jny-and/data/0013L-Nightmare Dubster/data/audio/../config.js"></script>
+
+
+
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0012" data-trackindex="A" src="data/Stromwerk-Session_0012-2017.05-krt-was-guests/data/0012A-Blackened Warrior/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0012" data-trackindex="B" src="data/Stromwerk-Session_0012-2017.05-krt-was-guests/data/0012B-Vogue Pedestrian/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0012" data-trackindex="C" src="data/Stromwerk-Session_0012-2017.05-krt-was-guests/data/0012C-Biscotti Kush/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0012" data-trackindex="D" src="data/Stromwerk-Session_0012-2017.05-krt-was-guests/data/0012D-Nutella Bluntwraps/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0012" data-trackindex="E" src="data/Stromwerk-Session_0012-2017.05-krt-was-guests/data/0012E-Heartbeat/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0012" data-trackindex="F" src="data/Stromwerk-Session_0012-2017.05-krt-was-guests/data/0012F-X-Files/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0012" data-trackindex="G" src="data/Stromwerk-Session_0012-2017.05-krt-was-guests/data/0012G-Smokey Dub/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0012" data-trackindex="H" src="data/Stromwerk-Session_0012-2017.05-krt-was-guests/data/0012H-Taliban Fighter/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0012" data-trackindex="I" src="data/Stromwerk-Session_0012-2017.05-krt-was-guests/data/0012I-Lamour Erotica/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0012" data-trackindex="J" src="data/Stromwerk-Session_0012-2017.05-krt-was-guests/data/0012J-Quahog Disco/data/audio/../config.js"></script>
+
+
+
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0011" data-trackindex="A" src="data/Stromwerk-Session_0011-2017.05-krt-was-rki-and-wui-guests/data/0011A-Beteigeuze Part 1/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0011" data-trackindex="B" src="data/Stromwerk-Session_0011-2017.05-krt-was-rki-and-wui-guests/data/0011B-Beteigeuze Part 2/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0011" data-trackindex="C" src="data/Stromwerk-Session_0011-2017.05-krt-was-rki-and-wui-guests/data/0011C-Beteigeuze Part 3/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0011" data-trackindex="D" src="data/Stromwerk-Session_0011-2017.05-krt-was-rki-and-wui-guests/data/0011D-Beteigeuze Part 4/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0011" data-trackindex="E" src="data/Stromwerk-Session_0011-2017.05-krt-was-rki-and-wui-guests/data/0011E-Beteigeuze Part 5/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0011" data-trackindex="F" src="data/Stromwerk-Session_0011-2017.05-krt-was-rki-and-wui-guests/data/0011F-Beteigeuze Part 6/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0011" data-trackindex="G" src="data/Stromwerk-Session_0011-2017.05-krt-was-rki-and-wui-guests/data/0011G-Beteigeuze Part 7/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0011" data-trackindex="H" src="data/Stromwerk-Session_0011-2017.05-krt-was-rki-and-wui-guests/data/0011H-Cliquot Jailbait/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0011" data-trackindex="I" src="data/Stromwerk-Session_0011-2017.05-krt-was-rki-and-wui-guests/data/0011I-Kerouac Bondage/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0011" data-trackindex="J" src="data/Stromwerk-Session_0011-2017.05-krt-was-rki-and-wui-guests/data/0011J-Old-money Bungalow/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0011" data-trackindex="K" src="data/Stromwerk-Session_0011-2017.05-krt-was-rki-and-wui-guests/data/0011K-Bad Persona/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0011" data-trackindex="L" src="data/Stromwerk-Session_0011-2017.05-krt-was-rki-and-wui-guests/data/0011L-Scarlet Brunch/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0011" data-trackindex="M" src="data/Stromwerk-Session_0011-2017.05-krt-was-rki-and-wui-guests/data/0011M-Wild West Soiree/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0011" data-trackindex="N" src="data/Stromwerk-Session_0011-2017.05-krt-was-rki-and-wui-guests/data/0011N-Upper West Side Synesthesia/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0011" data-trackindex="O" src="data/Stromwerk-Session_0011-2017.05-krt-was-rki-and-wui-guests/data/0011O-Austin Ballgag/data/audio/../config.js"></script>
+
+
+
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0010" data-trackindex="A" src="data/Stromwerk-Session_0010-2017.03-krt-was-rki-ast-guests/data/0010A-Westward Soiree/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0010" data-trackindex="B" src="data/Stromwerk-Session_0010-2017.03-krt-was-rki-ast-guests/data/0010B-Patty Hearst Dependency/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0010" data-trackindex="C" src="data/Stromwerk-Session_0010-2017.03-krt-was-rki-ast-guests/data/0010C-Bourbon Boudoir/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0010" data-trackindex="D" src="data/Stromwerk-Session_0010-2017.03-krt-was-rki-ast-guests/data/0010D-Old-money Bronzer/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0010" data-trackindex="E" src="data/Stromwerk-Session_0010-2017.03-krt-was-rki-ast-guests/data/0010E-Kerouac Jailbait/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0010" data-trackindex="F" src="data/Stromwerk-Session_0010-2017.03-krt-was-rki-ast-guests/data/0010F-Onassis Indulgence/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0010" data-trackindex="G" src="data/Stromwerk-Session_0010-2017.03-krt-was-rki-ast-guests/data/0010G-Carlyle Pedestrian/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0010" data-trackindex="H" src="data/Stromwerk-Session_0010-2017.03-krt-was-rki-ast-guests/data/0010H-Yacht Club Chalet/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0010" data-trackindex="I" src="data/Stromwerk-Session_0010-2017.03-krt-was-rki-ast-guests/data/0010I-Acid Magnolia/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0010" data-trackindex="J" src="data/Stromwerk-Session_0010-2017.03-krt-was-rki-ast-guests/data/0010J-Madison Avenue Wealth/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0010" data-trackindex="K" src="data/Stromwerk-Session_0010-2017.03-krt-was-rki-ast-guests/data/0010K-Blackened Synesthesia/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0010" data-trackindex="L" src="data/Stromwerk-Session_0010-2017.03-krt-was-rki-ast-guests/data/0010L-Kool Aid Gemstones/data/audio/../config.js"></script>
+
+
+
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0009" data-trackindex="A" src="data/Stromwerk-Session_0009-2017.03-krt-was-ast-guests/data/0009A-Four Seasons Soiree/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0009" data-trackindex="B" src="data/Stromwerk-Session_0009-2017.03-krt-was-ast-guests/data/0009B-Bergdorf Melodrama/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0009" data-trackindex="C" src="data/Stromwerk-Session_0009-2017.03-krt-was-ast-guests/data/0009C-Cape Cod Erotica/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0009" data-trackindex="D" src="data/Stromwerk-Session_0009-2017.03-krt-was-ast-guests/data/0009D-Crystalline Kisses/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0009" data-trackindex="E" src="data/Stromwerk-Session_0009-2017.03-krt-was-ast-guests/data/0009E-Ghetto Sugar Baby/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0009" data-trackindex="F" src="data/Stromwerk-Session_0009-2017.03-krt-was-ast-guests/data/0009F-Soft-serve Pansexual/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0009" data-trackindex="G" src="data/Stromwerk-Session_0009-2017.03-krt-was-ast-guests/data/0009G-Blackened Orchid/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0009" data-trackindex="H" src="data/Stromwerk-Session_0009-2017.03-krt-was-ast-guests/data/0009H-Lil Miss Tanning Salon/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0009" data-trackindex="I" src="data/Stromwerk-Session_0009-2017.03-krt-was-ast-guests/data/0009I-Kool Aid Harlot/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0009" data-trackindex="J" src="data/Stromwerk-Session_0009-2017.03-krt-was-ast-guests/data/0009J-Neo-realist Hunny/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0009" data-trackindex="K" src="data/Stromwerk-Session_0009-2017.03-krt-was-ast-guests/data/0009K-Hydroponic Jailbait/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0009" data-trackindex="L" src="data/Stromwerk-Session_0009-2017.03-krt-was-ast-guests/data/0009L-Super Truck Stop/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0009" data-trackindex="M" src="data/Stromwerk-Session_0009-2017.03-krt-was-ast-guests/data/0009M-Mahogany Bikini Wax/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0009" data-trackindex="N" src="data/Stromwerk-Session_0009-2017.03-krt-was-ast-guests/data/0009N-Swarovski Gazebo/data/audio/../config.js"></script>
+
+
+
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0008" data-trackindex="A" src="data/Stromwerk-Session_0008-2017.03-krt-was-ast-guests/data/0008A-Weimar Pharmacy/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0008" data-trackindex="B" src="data/Stromwerk-Session_0008-2017.03-krt-was-ast-guests/data/0008B-Beignet Regatta/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0008" data-trackindex="C" src="data/Stromwerk-Session_0008-2017.03-krt-was-ast-guests/data/0008C-Afghan Indulgence/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0008" data-trackindex="D" src="data/Stromwerk-Session_0008-2017.03-krt-was-ast-guests/data/0008D-Fine Delinquent/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0008" data-trackindex="E" src="data/Stromwerk-Session_0008-2017.03-krt-was-ast-guests/data/0008E-Fire Island Daydreams/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0008" data-trackindex="F" src="data/Stromwerk-Session_0008-2017.03-krt-was-ast-guests/data/0008F-Quahog Rapture/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0008" data-trackindex="G" src="data/Stromwerk-Session_0008-2017.03-krt-was-ast-guests/data/0008G-Wall Street Bulimia/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0008" data-trackindex="H" src="data/Stromwerk-Session_0008-2017.03-krt-was-ast-guests/data/0008H-Manson Dysmorphia/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0008" data-trackindex="I" src="data/Stromwerk-Session_0008-2017.03-krt-was-ast-guests/data/0008I-Amagansett Melodrama/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0008" data-trackindex="J" src="data/Stromwerk-Session_0008-2017.03-krt-was-ast-guests/data/0008J-Ghetto Dame/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0008" data-trackindex="K" src="data/Stromwerk-Session_0008-2017.03-krt-was-ast-guests/data/0008K-Moet Bronzer/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0008" data-trackindex="L" src="data/Stromwerk-Session_0008-2017.03-krt-was-ast-guests/data/0008L-Upper West Side Schooner/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0008" data-trackindex="M" src="data/Stromwerk-Session_0008-2017.03-krt-was-ast-guests/data/0008M-Diamond Misery/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0008" data-trackindex="N" src="data/Stromwerk-Session_0008-2017.03-krt-was-ast-guests/data/0008N-Aztec Nightmare/data/audio/../config.js"></script>
+
+
+
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0007" data-trackindex="A" src="data/Stromwerk-Session_0007-2017.03-krt-was-ast-guests/data/0007A-Carlyle Suspiria/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0007" data-trackindex="C" src="data/Stromwerk-Session_0007-2017.03-krt-was-ast-guests/data/0007C-Chloroform Debutante/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0007" data-trackindex="D" src="data/Stromwerk-Session_0007-2017.03-krt-was-ast-guests/data/0007D-Mahogany Bulimia/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0007" data-trackindex="E" src="data/Stromwerk-Session_0007-2017.03-krt-was-ast-guests/data/0007E-Marfa Bronzer/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0007" data-trackindex="F" src="data/Stromwerk-Session_0007-2017.03-krt-was-ast-guests/data/0007F-Flash Light/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0007" data-trackindex="G" src="data/Stromwerk-Session_0007-2017.03-krt-was-ast-guests/data/0007G-Chloroform Bronzer/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0007" data-trackindex="H" src="data/Stromwerk-Session_0007-2017.03-krt-was-ast-guests/data/0007H-Bad Bronzer/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0007" data-trackindex="I" src="data/Stromwerk-Session_0007-2017.03-krt-was-ast-guests/data/0007I-Moet Dominatrix/data/audio/../config.js"></script>
+
+
+
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0006" data-trackindex="A" src="data/Stromwerk-Session_0006-2017.03-krt-was-guests/data/0006A-Grand Canyon Dysmorphia/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0006" data-trackindex="B" src="data/Stromwerk-Session_0006-2017.03-krt-was-guests/data/0006B-Biscotti Tiki Shack/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0006" data-trackindex="C" src="data/Stromwerk-Session_0006-2017.03-krt-was-guests/data/0006C-Amagansett Smiles/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0006" data-trackindex="D" src="data/Stromwerk-Session_0006-2017.03-krt-was-guests/data/0006D-Bardot Pansexual/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0006" data-trackindex="E" src="data/Stromwerk-Session_0006-2017.03-krt-was-guests/data/0006E-Marrakesh Regatta/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0006" data-trackindex="F" src="data/Stromwerk-Session_0006-2017.03-krt-was-guests/data/0006F-Neo-realist Wealth/data/audio/../config.js"></script>
+
+
+
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0005" data-trackindex="A" src="data/Stromwerk-Session_0005-2017.02-krt-was-guests/data/0005A-Marfa Brunch/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0005" data-trackindex="B" src="data/Stromwerk-Session_0005-2017.02-krt-was-guests/data/0005B-Boleyn Smiles/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0005" data-trackindex="C" src="data/Stromwerk-Session_0005-2017.02-krt-was-guests/data/0005C-Ragtime Sexts/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0005" data-trackindex="D" src="data/Stromwerk-Session_0005-2017.02-krt-was-guests/data/0005D-Diamond Murder/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0005" data-trackindex="E" src="data/Stromwerk-Session_0005-2017.02-krt-was-guests/data/0005E-Old-money Gazebo/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0005" data-trackindex="F" src="data/Stromwerk-Session_0005-2017.02-krt-was-guests/data/0005F-Spoiled Suffocation/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0005" data-trackindex="G" src="data/Stromwerk-Session_0005-2017.02-krt-was-guests/data/0005G-Cherry Asphyxiation/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0005" data-trackindex="H" src="data/Stromwerk-Session_0005-2017.02-krt-was-guests/data/0005H-Sepia Pedestrian/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0005" data-trackindex="I" src="data/Stromwerk-Session_0005-2017.02-krt-was-guests/data/0005I-Crystalline Whore/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0005" data-trackindex="J" src="data/Stromwerk-Session_0005-2017.02-krt-was-guests/data/0005J-Blackened Poetry/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0005" data-trackindex="K" src="data/Stromwerk-Session_0005-2017.02-krt-was-guests/data/0005K-Promised Land/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0005" data-trackindex="L" src="data/Stromwerk-Session_0005-2017.02-krt-was-guests/data/0005L-Lunatic Crucifix/data/audio/../config.js"></script>
+
+
+
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0004" data-trackindex="A" src="data/Stromwerk-Session_0004-2017.02-krt-was-guests/data/0004A-Das Labor/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0004" data-trackindex="B" src="data/Stromwerk-Session_0004-2017.02-krt-was-guests/data/0004B-Old-money Castaway/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0004" data-trackindex="C" src="data/Stromwerk-Session_0004-2017.02-krt-was-guests/data/0004C-Euro Rehab/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0004" data-trackindex="D" src="data/Stromwerk-Session_0004-2017.02-krt-was-guests/data/0004D-Warhol Ottoman/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0004" data-trackindex="E" src="data/Stromwerk-Session_0004-2017.02-krt-was-guests/data/0004E-Sazerac Debutante/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0004" data-trackindex="F" src="data/Stromwerk-Session_0004-2017.02-krt-was-guests/data/0004F-Honeyed Love Affair/data/audio/../config.js"></script>
+
+
+
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0003" data-trackindex="A" src="data/Stromwerk-Session_0003-2017.02-krt-was-rki/data/0003A-Monied Salon/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0003" data-trackindex="B" src="data/Stromwerk-Session_0003-2017.02-krt-was-rki/data/0003B-Old-money Brunch/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0003" data-trackindex="C" src="data/Stromwerk-Session_0003-2017.02-krt-was-rki/data/0003C-Manson Pansexual/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0003" data-trackindex="D" src="data/Stromwerk-Session_0003-2017.02-krt-was-rki/data/0003D-Blade/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0003" data-trackindex="E" src="data/Stromwerk-Session_0003-2017.02-krt-was-rki/data/0003E-Cherry Widow/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0003" data-trackindex="F" src="data/Stromwerk-Session_0003-2017.02-krt-was-rki/data/0003F-Warhol Gazebo/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0003" data-trackindex="G" src="data/Stromwerk-Session_0003-2017.02-krt-was-rki/data/0003G-Croissant Bleach/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0003" data-trackindex="H" src="data/Stromwerk-Session_0003-2017.02-krt-was-rki/data/0003H-Tanzbär/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0003" data-trackindex="I" src="data/Stromwerk-Session_0003-2017.02-krt-was-rki/data/0003I-Sepia Fight/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0003" data-trackindex="J" src="data/Stromwerk-Session_0003-2017.02-krt-was-rki/data/0003J-Breezy Seance/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0003" data-trackindex="K" src="data/Stromwerk-Session_0003-2017.02-krt-was-rki/data/0003K-Das Netz/data/audio/../config.js"></script>
+
+
+
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0002" data-trackindex="A" src="data/Stromwerk-Session_0002-2016.12-krt-was-guests/data/0002A-Let There Be House/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0002" data-trackindex="B" src="data/Stromwerk-Session_0002-2016.12-krt-was-guests/data/0002B-Lost In Dub/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0002" data-trackindex="C" src="data/Stromwerk-Session_0002-2016.12-krt-was-guests/data/0002C-Bourbon Daydreams/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0002" data-trackindex="D" src="data/Stromwerk-Session_0002-2016.12-krt-was-guests/data/0002D-Bourbon Foreplay/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0002" data-trackindex="E" src="data/Stromwerk-Session_0002-2016.12-krt-was-guests/data/0002E-Cherry Sine/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0002" data-trackindex="F" src="data/Stromwerk-Session_0002-2016.12-krt-was-guests/data/0002F-Bomba Dub/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0002" data-trackindex="G" src="data/Stromwerk-Session_0002-2016.12-krt-was-guests/data/0002G-Madison Avenue Daydreams/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0002" data-trackindex="H" src="data/Stromwerk-Session_0002-2016.12-krt-was-guests/data/0002H-Kubrick Soiree/data/audio/../config.js"></script>
+
+
+
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0001" data-trackindex="A" src="data/Stromwerk-Session_0001-2016.12-krt-was-rki-guests/data/0001A-Amagansett Misery/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0001" data-trackindex="B" src="data/Stromwerk-Session_0001-2016.12-krt-was-rki-guests/data/0001B-Organistan/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0001" data-trackindex="C" src="data/Stromwerk-Session_0001-2016.12-krt-was-rki-guests/data/0001C-Wirtshaus Sexts/data/audio/../config.js"></script>
+	<script type="text/javascript" class="trackconfig" data-sessionindex="session0001" data-trackindex="D" src="data/Stromwerk-Session_0001-2016.12-krt-was-rki-guests/data/0001D-Alamo Wealth/data/audio/../config.js"></script>
+
+
+
+
+
+    <script type="text/javascript" src="data/stemplayer/js/d3.v3.min.js"></script>
+    <script type="text/javascript" src="data/stemplayer/js/volume-meter.js"></script>
+    <script type="text/javascript" src="data/stemplayer/js/stemplayer.js"></script>
+
+</body>
+</html>

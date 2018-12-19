@@ -1,0 +1,66 @@
+  * 30er sessionprüfen - da war stromausfall
+ 
+ 
+ * TODO sessionSplitter
+ *  deprecated backticks for cmd
+ *  typ maually
+ *  print final letter or tracknumber on each output during progress
+ *  primary argument input path
+ *  -y arg to regenerate everything without waiting for any keyboard input
+ *  -f argument to ignore unsupported configuraten (for example BPM detect without required binaries)
+ *  only add "[finalsplits]" when not available
+ *  sorted musicians
+ *  remove functionality of [tracknames] mapping
+ *  remove number detection directory OR use stemWebTarget/data as default
+ *  remove initial listing of musicians/emails
+ *  possibility to have a single mp3 or wav as source without merging anything
+ *  final splits addendum in config.txt has new generated tracknames
+ *  remove/replace final splits addendum in case it exists
+ *  write processing datetime to finalsplits addendum
+ *  currently we need name+email - this should be optional...
+ *  rename messages
+ *    creating stem (from wav to mp3 192KB) for webplayer
+ *    creating intrument track (mp3) from normalized wav
+ * try if filenames like seiko[M].wav works (see session #31 with seiko-mono.WAV )
+ * unify marker names in bash and js ###TRACK_TITLE### vs {track.title} vs {trackTitle}
+ * stem JS injection:
+ *   add a marker begin+end for injected script paths per session
+ *   in case it exists replace it instead of creating duplicates
+ * 
+ * 
+ * [splitter]
+splitpoints = 
+    00:02 - 13:08
+    14:39 - 30:38
+
+ * having a config file without the line "splitpoints =" triggers parsing error without exit
+ * 
+ * 
+ * BUG peaks memory size -> create low quality wav for peak detection
+ * 
+ *     title: 'Quahog Boheme',
+    artist: 'Stromwerk',
+    trackNumber: 'D',
+        session: 'session0025',
+        + 26 d
+        
+        
+
+# TODO: list of all binaries/command used
+#   requirements
+#     ffmpeg
+#     ffprobe
+#     python2 (config file parsing)
+#     bash >=4.3
+#     openssl (to generate random numbers)
+#   optional requirements
+#     php (when create stem web player)
+#     zip when enabled
+#     bpmdetect|soundstretch (when bpm detection is enabled)
+#   those should be standard right?
+#     cd echo cat pwd mkdir rm ln find touch eval sed awk grep kill read md5sum date basename dirname realpath bc sort exit
+# move everything to config file
+# timelogger for different features
+# verbosity level
+# remove master/slave stuff
+#@see https://splice.com/blog/native-instruments-stems-format-how-it-works/
