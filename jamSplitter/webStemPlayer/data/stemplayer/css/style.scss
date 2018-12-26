@@ -167,6 +167,38 @@ input[type="range"]::-ms-fill-upper {
   width: 100vw;
   height: 100vh;
 }
+
+
+.page__loader {
+  margin-top: 15%;
+  width: 100%;
+  text-align: center;
+  .path__logo {
+    fill: #0d1332;
+    transition: fill 0.5s ease;
+  }
+  .path__progress {
+    // @see https://codepen.io/xgad/post/svg-radial-progress-meters
+    transform: rotate(-90deg);
+    stroke-width: 5px;
+    stroke-linecap: round;
+    opacity: 1;
+    transition: opacity 0.5s ease-out, stroke-dashoffset 0.4s ease;
+    
+  }
+  
+  h1 {
+    font-size: 5em;
+    margin: 0;
+    color: #0d1332;
+    transition: color 0.5s ease;
+  }
+  
+  h3 {
+    color: mix($darkblue, #000, 60%);
+  }
+}
+
 .page__header {
   display: flex;
   align-items: flex-start;

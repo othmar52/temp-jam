@@ -60,6 +60,8 @@
  * 
  * https://github.com/GoogleChromeLabs/simplehttp2server
  * 
+ * implement bpm tapper. @see http://www.beatsperminuteonline.com/
+ * 
  */
 let waveformSettings = {
     waveColor: '#FF9C01',
@@ -84,47 +86,60 @@ let waveformSettings = {
  * ensure that the CORS headers on serving origins are set correctly
  *   Header set Access-Control-Allow-Origin "*"
  *   Header set Access-Control-Allow-Methods: "GET"
+ * 
+ * TODO: use HTTP2 
  *
  */
 let httpSettings = {
     enable: true,
     audioPathSubstitutions: [
-        'http://stem1.s1.mpd/deliver/mu/usr/Stromwerk-Sessions/%s?stream=1',
-        'http://stem2.s1.mpd/deliver/mu/usr/Stromwerk-Sessions/%s?stream=1',
-        'http://stem3.s1.mpd/deliver/mu/usr/Stromwerk-Sessions/%s?stream=1',
-        'http://stem4.s1.mpd/deliver/mu/usr/Stromwerk-Sessions/%s?stream=1'
+        'http://stem1.stromwerk.playground/MUSIC/stromwerk/%s',
+        'http://stem2.stromwerk.playground/MUSIC/stromwerk/%s',
+        'http://stem3.stromwerk.playground/MUSIC/stromwerk/%s',
+        'http://stem4.stromwerk.playground/MUSIC/stromwerk/%s',
+        'http://stem5.stromwerk.playground/MUSIC/stromwerk/%s',
+        'http://stem6.stromwerk.playground/MUSIC/stromwerk/%s',
+        'http://stem7.stromwerk.playground/MUSIC/stromwerk/%s'
     ]
 }
-
 
 window.currentView = 'sessionList';
 window.currentSession = null;
 window.currentTrack = null;
 window.stemState = {};
 
-window.resyncAfter = 5; // seconds
+window.resyncAfter = 30; // seconds
 window.lastResync = window.performance.now();
 
 document.addEventListener('DOMContentLoaded', async function() {
-     drawFavicon();
+    drawFavicon();
+    let renderFunc = '';
     if (await checkConfig() === false) {
         // TODO: add fancy error page
         $('body').innerHTML = 'config error';
         return;
     }
     if(window.currentView === 'singleTrack') {
-        renderTrackView();
-        return;
+        renderFunc = 'renderTrackView';
     }
     if(window.currentView === 'trackList') {
-        renderTracklist();
-        return;
+        renderFunc = 'renderTracklist';
     }
     if(window.currentView === 'sessionList') {
-        renderSessionlist();
-        return;
+        renderFunc = 'renderSessionlist';
     }
-    console.log('ERROR: invalid view');
+    if(renderFunc === '') {
+        console.log('ERROR: invalid view');
+    }
+    setTimeout(
+        function(){
+            $('.page').innerHTML = '';
+            window[renderFunc]();
+        },
+        2000
+    );
+
+    
     
 
 });
@@ -149,11 +164,6 @@ let load = (function() {
 
         // Important success and error for the promise
         element.onload = function() {
-          fixAudioPaths(
-            attributes['data-sessionindex'],
-            attributes['data-trackindex'],
-            attributes['data-pathshortener']
-          );
           resolve(url);
         };
         element.onerror = function() {
@@ -196,136 +206,92 @@ function substituteAudioPathsWithHttpUrls(sessionIndex, trackIndex) {
     return true;
 }
 
-let recursiveFixConfigPath = (function() {
-  // Function which returns a function: https://davidwalsh.name/javascript-functions
-  function _shorten() {
-    return function(configPath, sessionIndex, trackIndex, pathShortenedBy) {
-      // This promise will be used by Promise.all to determine success or failure
-      return new Promise(async function(resolve, reject) {
-          if(typeof configPath === 'undefined') {
-              //console.log('undefined configPath');
-              reject(configPath);
-              return;
-          }
-
-            let pathChunks = configPath.split('/');
-            if(pathChunks.length < 2) {
-                //console.log("FAIL in Promise recursiveFixConfigPath() - path too short");
-                reject(configPath);
-                return;
-            }
-            //console.log("length", pathChunks.length);
-            pathChunks.shift();
-            pathChunks.shift();
-            pathShortenedBy -= 2;
-            let newPath = pathChunks.join("/");
-            console.log("newPath", newPath);
-            let attributes = {
-                type: 'text/javascript',
-                src: newPath,
-                class: 'scriptAdded',
-                'data-sessionindex': sessionIndex,
-                'data-trackindex': trackIndex,
-                'data-pathshortener': pathShortenedBy
-            };
-          await Promise.all([load.js(configPath, attributes)])
-          .then(function(){
-              //console.log("SUCCESS in Promise recursiveFixConfigPath()");
-              resolve(configPath);
-          })
-          .catch(async function(){
-              //console.log("FAIL in Promise recursiveFixConfigPath()");
-              await Promise.all([recursiveFixConfigPath.shorten(newPath, sessionIndex, trackIndex, pathShortenedBy)])
-              .then(function(){
-                  //console.log("promise recursiveFixConfigPath success");
-                  resolve(configPath);
-              })
-              .catch(function(){
-                  //console.log("promise recursiveFixConfigPath error");
-                  reject(configPath);
-                  return;
-              });
-              reject(configPath);
-              return;
-          });
-      });
-    };
-  }
-  
-  return {
-    shorten: _shorten()
-  }
-})();
 
 /**
  * 
  */
-function fixAudioPaths(sessionIndex, trackIndex, shortenBy) {
-    // maybe load was successful but was of another file
-    // because 'data/config.js' would match any track...
-    // so we need a try/catch block
-    try {
-        let stems = window.stemSessions[sessionIndex].tracks[trackIndex].stems;
-        if(substituteAudioPathsWithHttpUrls(sessionIndex, trackIndex) === true) {
-            // we have an alternative path fix
+function prefixAudioPaths(sessionIndex, trackIndex, pathPrefix) {
+
+    let stems = window.stemSessions[sessionIndex].tracks[trackIndex].stems;
+    stems.forEach(function(stem, stemIndex) {
+        if( typeof window.stemSessions[sessionIndex].tracks[trackIndex].stems[stemIndex].pathCorrectionDone !== 'undefined') {
+            // path correction already applied (maybe caused by duplicates during testing)
             return;
         }
-        stems.forEach(function(stem, stemIndex) {
-            let stemShortenBy = shortenBy;
-            let path = stem.filePath;
-            let pathJunks = stem.filePath.split('/');
-            while(stemShortenBy < 0) {
-                stemShortenBy++;
-                pathJunks.shift();
-            }
-            window.stemSessions[sessionIndex].tracks[trackIndex].stems[stemIndex].filePath = pathJunks.join('/');
-        });
-    } catch(e) {
-        //throw 'loaded config file was obviously for a different track';
-    }
+        window.stemSessions[sessionIndex].tracks[trackIndex].stems[stemIndex].filePath = pathPrefix + stem.filePath;
+        window.stemSessions[sessionIndex].tracks[trackIndex].stems[stemIndex].pathCorrectionDone = true;
+    });
+    substituteAudioPathsWithHttpUrls(sessionIndex, trackIndex);
 }
+
+
 
 /**
  * TODO: remove items when there is no audio avalilable
  */
 async function checkConfigPaths() {
-
-    // apply path correction to configs
-    let scripts = $$('.trackconfig');
-    
-    for(let i=0; i< scripts.length; i++) {
-      let element = scripts[i];
-      let configId = element.dataset.sessionindex + ' ' + element.dataset.trackindex;
-
-      try {
-          if( typeof window.stemSessions[element.dataset.sessionindex].tracks[element.dataset.trackindex] === 'undefined') {
-              throw "ERROR config";
-          }
-          substituteAudioPathsWithHttpUrls(element.dataset.sessionindex, element.dataset.trackindex);
-          //console.log(configId + ' no need for PATHFIX ', window.stemSessions[element.dataset.sessionindex].tracks[element.dataset.trackindex]);
-      } catch(e) {
-          console.log(configId + ' need PATHFIX');
-          await Promise.all([
-              recursiveFixConfigPath.shorten(
-                  element.getAttribute("src"),
-                  element.dataset.sessionindex,
-                  element.dataset.trackindex,
-                  0
-              )
-          ])
-          .then(function(){
-              console.log(configId + ' PATHFIX SUCCESS');
-          })
-          .catch(function(){
-              console.log(configId + ' PATHFIX FAILED');
-          });
-      }
+    let totalItemsToCheck = window.tracklist.length;
+    let itemsChecked = 0;
+    let strokeDasharray = $('.path__progress').getAttribute('stroke-dasharray');
+    for(let i=0; i< window.tracklist.length; i++) {
+        let sessIdx = window.tracklist[i].sessionIndex;
+        for(let ii=0; ii< window.tracklist[i].tracks.length; ii++) {
+            let trackIdx = window.tracklist[i].tracks[ii].trackIndex;
+            let pathChunks = [
+                'data', ""
+            ];
+            if(window.hostLevel === 'sessionlist' || window.hostLevel === 'tracklist') {
+                pathChunks.unshift(window.tracklist[i].tracks[ii].trackDir);
+                pathChunks.unshift('data');
+            }
+            if(window.hostLevel === 'sessionlist') {
+                pathChunks.unshift( window.tracklist[i].sessionDir);
+                pathChunks.unshift('data');
+            }
+            let trackDataPath = pathChunks.join("/");
+            let scriptId = 'cnf-' + sessIdx.replace(/[\W_]+/g,"_") + '-' + trackIdx;
+            let attributes = {
+                id: scriptId,
+                type: 'text/javascript',
+                src: trackDataPath + 'config.js'
+            };
+            
+            await Promise.all([load.js(trackDataPath, attributes)])
+            .then(function(){
+                //console.log("SUCCESS in Promise checkConfigPaths()", sessIdx, trackIdx);
+                prefixAudioPaths(sessIdx, trackIdx, trackDataPath);
+                return;
+            })
+            .catch(function(){
+                //console.log("FAIL in Promise checkConfigPaths()", sessIdx, trackIdx, scriptId);
+                // remove script container
+                $('#' + scriptId).remove();
+            });
+            
+        }
+        itemsChecked++;
+        $('.path__progress').setAttribute('stroke-dashoffset', strokeDasharray - strokeDasharray*itemsChecked / (totalItemsToCheck/100)*0.01 );
     }
+    
     return true;
 }
 
+function renderLoadingView() {
+    let loaderMarkup = $('#loader-markup').innerHTML;
+    realDomInjection(loaderMarkup, '.page');
+}
+
 async function checkConfig() {
+    renderLoadingView();
+    
     await checkConfigPaths();
+    
+    $('.path__progress').style.opacity = 0;
+    $('.page__loader h1').style.color = '#60d4ff';
+    Array.from($$('.page__loader .path__logo')).forEach(function(element) {
+      element.style.fill = '#60d4ff';
+    });
+
     //console.log('no more tries to load script...');
     if(!window.stemSessions) {
         console.log("config error");
@@ -380,21 +346,6 @@ function calculateDurations() {
         
         window.allSessions.count ++;
         window.allSessions.duration += sessionDuration;
-        
-        // remove this as soon we have a json properties
-        window.stemSessions[sessionIdx].counter = parseFloat(sessionIdx.substr(-4));
-        window.stemSessions[sessionIdx].index = sessionIdx;
-        
-        match = /(\d{4})\.?(\d{2})?\.?(\d{2})?/.exec(window.stemSessions[sessionIdx].date);
-        window.stemSessions[sessionIdx].day = (match[3] > 0) ? zeroPad(parseInt(match[3]), 2) : '??';
-        window.stemSessions[sessionIdx].month = (match[2] > 0) ? zeroPad(parseInt(match[2]), 2) : '??';
-        window.stemSessions[sessionIdx].year = (match[1] > 0) ? match[1] : '????';
-        const monthNames = {
-            '01': 'Jan', '02': 'Feb', '03': 'Mär', '04': 'Apr', '05': 'Mai', '06': 'Jun',
-            '07': 'Jul', '08': 'Aug', '09': 'Sep', '10': 'Okt', '11': 'Nov', '12': 'Dez',
-            '??': '???'
-        };
-        window.stemSessions[sessionIdx].month = monthNames[ window.stemSessions[sessionIdx].month ];
     }
 }
 
@@ -414,16 +365,6 @@ Object.size = function(obj) {
     }
     return size;
 };
-
-
-function realDomInjectionORIGINAL(markup, targetSelector) {
-    // assigning markupString cause errors in drawWaveform()
-    // so lets create a DOM element befor assigning :/
-    let dummyWrapper = document.createElement('div');
-    dummyWrapper.innerHTML = markup;
-    $(targetSelector).appendChild(dummyWrapper.firstElementChild);
-}
-
 
 function realDomInjection(markup, targetSelector, position='inside') {
     // assigning markupString cause errors in drawWaveform()
@@ -529,10 +470,11 @@ function getStemTitlesMarkup(stemTitles) {
 function substituteTrackProperties(markup, track) {
     return markup
         .replace(/{track.index}/g, track.trackNumber)
+        .replace(/{track.trackNumber}/g, track.trackNumber)
+        .replace(/{track.trackLetter}/g, track.trackLetter)
         .replace(/{track.title}/g, track.title)
         .replace(/{track.duration}/g, formatTime(track.duration))
         .replace(/{track.bpm}/g, ((track.bpm > 0) ? '<span class="bpm">'+track.bpm+' BPM</span>' : '') )
-        .replace(/{track.trackNumber}/g, idx)
         .replace(/{track.stemTitles}/g, getStemTitlesMarkup(track.stemTitles));
 }
 

@@ -199,6 +199,32 @@ input[type=range]::-ms-fill-upper {
   height: 100vh;
 }
 
+.page__loader {
+  margin-top: 15%;
+  width: 100%;
+  text-align: center;
+}
+.page__loader .path__logo {
+  fill: #0d1332;
+  transition: fill 0.5s ease;
+}
+.page__loader .path__progress {
+  transform: rotate(-90deg);
+  stroke-width: 5px;
+  stroke-linecap: round;
+  opacity: 1;
+  transition: opacity 0.5s ease-out, stroke-dashoffset 0.4s ease;
+}
+.page__loader h1 {
+  font-size: 5em;
+  margin: 0;
+  color: #0d1332;
+  transition: color 0.5s ease;
+}
+.page__loader h3 {
+  color: #131d37;
+}
+
 .page__header {
   display: flex;
   align-items: flex-start;

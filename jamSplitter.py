@@ -4,10 +4,10 @@
 # TODO properly normalizing https://gist.github.com/kylophone/84ba07f6205895e65c9634a956bf6d54
 #           session # 8 has heavy distortion passages
 # TODO removal of output directory after processing in case it is empty
+# TODO never convert mono stems to stereo target files?
 # TODO cursor is missing in shell after executing script
 #   first appearance was implementing futures
 #   typing "reset" brings back the cursor again
-# TODO add day month year properties to session object
 # TODO use dom parser to inject javascript paths
 # TODO choose between trackLetter OR trackNumber by configuration
 # TODO normalize + volumeDetect BEFORE concatenating silence?
@@ -16,7 +16,6 @@
 # TODO handle split detection with html player visualization
 # TODO replace wavPeak detection (currently php script) with python
 # TODO remove webstem session dir in case it exists ()
-# TODO JS path has traversal: data/Stromwerk-Session_0003-2017.02-krt-was-rki/data/0003C-Manson Pansexual/data/audio/../config.js
 # TODO test the whole thing on windows
 #   TODO replace symlink stuff of webstemplayer with hard copies on windows
 
@@ -34,7 +33,7 @@
 # progress bar in stdout
 # http://danshiebler.com/2016-09-14-parallel-progress-bar/
 
-# benchmark 9.12.2018
+# benchmark 9.12.2018 (8 workers)
 #  57 sessions
 #  real    632m18,401s
 #  user    1006m44,385s
@@ -42,10 +41,21 @@
 #  = ~ 17 hours
 #  = ~ 20 min/session
 
+
+# benchmark 24.12.2018 (5 workers)
+#  59 sessions
+#  real    618m44,696s
+#  user    1068m2,257s
+#  sys     75m28,561s
+
+#  = ~ 18 hours
+#  = ~ 20 min/session
+
 import argparse
 import configparser
 import fnmatch
 import datetime
+import locale
 import json
 import os
 import re
@@ -57,7 +67,6 @@ import sys
 import subprocess
 import time
 import concurrent.futures
-
 from pathlib import Path
 
 from jamSplitter import *
@@ -118,6 +127,9 @@ class JamSession(object):
         self.counter = None
         self.paddedCounter = None
         self.dateString = None
+        self.day = '??'
+        self.month = '???'
+        self.year = '????'
         self.dirName = ''
         self.uniqueSortedShorties = []
         self.inputFiles = []
@@ -153,6 +165,7 @@ class Stem(object):
 
 class Track(object):
     def __init__(self):
+        self.dirName = ''
         self.startSecond = None
         self.endSecond = None
         self.duration = 0
@@ -174,7 +187,7 @@ class Track(object):
             'maxVolumeMax': -1000
         }
         self.webStemConfigJsFile = None
-        self.webStemConfigJsFileRelative = None
+        self.tracklistJsFile = None
         self.stems = []
 
 class WebStemPlayer(object):
@@ -184,9 +197,11 @@ class WebStemPlayer(object):
         self.playerDir = Path('%s/data/stemplayer' % str(self.templateDir))
         self.trackConfigTemplate = Path('%s/trackConfigTemplate.js' % str(self.templateDir))
         self.stemConfigTemplate = Path('%s/stemConfigTemplate.js' % str(self.templateDir))
+        self.tracklistConfigTemplate = Path('%s/tracklistConfigTemplate.js' % str(self.templateDir))
         self.targetDir = None
         self.baseHtmlName = ''
         self.baseHtml = None
+        self.tracklistJsFile = None
         
 class JamConf(object):
     def __init__(self):
@@ -211,6 +226,12 @@ class JamConf(object):
         self.silenceDetection = None
         self.fullLengthWavMix = None
         self.fullLengthWavMixNormalized = None
+        self.randomTracknames = {
+            'prefixes': [],
+            'suffixes': [],
+            'usedTrackTitles': [],
+            'usedTrackTitleWords': []
+        }
 
 class SilenceDetection(object):
     def __init__(self, activate):
@@ -220,6 +241,8 @@ class SilenceDetection(object):
 
 def main():
     global config, jamConf
+    locale.setlocale(locale.LC_TIME, "de_AT.UTF-8")
+    
     logging.basicConfig(level=logging.WARNING)
     jamConf = JamConf()
     if not jamConf.programDir.exists():
@@ -263,6 +286,11 @@ def main():
     if validateConfig() != True:
         print ( colored ( "exiting due to config errors...", "red" ) )
         sys.exit()
+  
+    for i in range(20):
+       print( getRandomTrackName() )
+       
+    sys.exit()
   
 
     if jamConf.mp3Mix['isRequired'] == True:
@@ -346,6 +374,7 @@ def silenceDetectResultToConfigFile():
     while True:
         char = input()
         if char == 'r':
+            splitConfToTracks(getFileContent(jamConf.silenceDetection.autoDetectResultFile).split('\n'))
             printCurrentSplitConfig()
         if char == 'y':
             break
@@ -362,7 +391,7 @@ def printCurrentSplitConfig():
             secondsToMinutes(track.duration, True),
             track.trackTitle
         ))
-    sys.exit()
+    #sys.exit()
 
 def _doing(term, newLine=False):
     print( colored( '  %s' % term , 'white'), end='', flush=True )
@@ -411,16 +440,13 @@ def processTrack(track):
     _nextTrack(track)
     splitsForMergedSum = []
     
-    webStemTargetDir = Path('%s/data/%s/data/%s%s-%s/data/audio' % (
+    webStemTargetDir = Path('%s/data/%s/data/%s/data' % (
         jamConf.wsp.targetDir,
         jamConf.jamSession.dirName,
-        jamConf.jamSession.paddedCounter,
-        track.trackLetter,
-        track.trackTitle
+        track.dirName
     ))
-    track.webStemConfigJsFile = Path('%s/../config.js' % str(webStemTargetDir))
-    # convert absolute path to relative path
-    track.webStemConfigJsFileRelative = str(track.webStemConfigJsFile)[(len(str(jamConf.wsp.targetDir))+1):]
+    track.webStemConfigJsFile = Path('%s/config.js' % str(webStemTargetDir))
+    track.tracklistJsFile = Path('%s/tracklist.js' % str(webStemTargetDir))
     
     wavSplitTrackDir = Path('%s/%s/%s-wavsplits/%s-%s' % (
         jamConf.targetDir,
@@ -543,7 +569,8 @@ def processTrack(track):
             )
 
             # shorten absolute path to relative path
-            webStem.path = str(webStemTargetFile)[(len(str(jamConf.wsp.targetDir))+1):]
+            #webStem.path = str(webStemTargetFile)[(len(str(jamConf.wsp.targetDir))+1):]
+            webStem.path = str(webStemTargetFile.name)
             track.stems.append(webStem)
             track.byteSize = track.byteSize + webStem.byteSize
             _done()
@@ -611,13 +638,14 @@ def processTrack(track):
         _no()
     else:
         _yes()
+        # create symlinks for single track
         symlink(
             '../../../../stemplayer',
-            ('%s/../stemplayer' % str(webStemTargetDir))
+            ('%s/stemplayer' % str(webStemTargetDir))
         )
         symlink(
             ('../../../../%s' % jamConf.wsp.baseHtmlName),
-            ('%s/../../%s.htm' % (str(webStemTargetDir), track.trackTitle) )
+            ('%s/../%s.htm' % (str(webStemTargetDir), az09(track.trackTitle)) )
         )
         
         finishWebStemTrack(track)
@@ -652,6 +680,9 @@ def finishWebStemTrack(track):
         '{session.counter}': jamConf.jamSession.counter,
         '{session.paddedCounter}': jamConf.jamSession.paddedCounter,
         '{session.date}': jamConf.jamSession.dateString,
+        '{session.day}': jamConf.jamSession.day,
+        '{session.month}': jamConf.jamSession.month,
+        '{session.year}': jamConf.jamSession.year,
         '{track.letter}': track.trackLetter,
         '{track.number}': track.trackNumber,
         '{track.title}': track.trackTitle,
@@ -694,22 +725,86 @@ def guessInitalVolumeLevel(stemLevels, trackLevelBoundries):
 
 def finishWebStemSession():
     global jamConf
-    print ( "finishWebStemSession()")
-    injectMarker = '<!--NEWTRACKCONFIGS-->'
-    jsScriptMarkup = [injectMarker]
-    for track in jamConf.jamSession.tracks:
-        jsScriptMarkup.append(
-            '\t<script type="text/javascript" class="trackconfig" data-sessionindex="session%s" data-trackindex="%s" src="%s"></script>'
-            %
-            (jamConf.jamSession.paddedCounter, track.trackLetter, str(track.webStemConfigJsFileRelative))
-        )
-        
-    jsScriptMarkup += ['', '', '']
-    baseHtmlMarkup = getFileContent(str(jamConf.wsp.baseHtml))
-    baseHtmlMarkup = baseHtmlMarkup.replace(injectMarker, '\n'.join(jsScriptMarkup) )
-    jamConf.wsp.baseHtml.write_text(baseHtmlMarkup)
     
-    #print(baseHtmlMarkup )
+    
+    trackJsTemplate = '        { trackIndex : "{track.trackLetter}", trackDir: "{track.dirName}" }'
+    tracklistJsTemplate = getFileContent(str(jamConf.wsp.tracklistConfigTemplate))
+    allTracksJs = []
+    
+    for track in jamConf.jamSession.tracks:
+        searchReplace = {
+            '{track.dirName}': track.dirName,
+            '{track.trackLetter}': track.trackLetter
+        }
+        trackJs = trackJsTemplate
+        for search in searchReplace:
+            trackJs = trackJs.replace(search, str(searchReplace[search]))
+
+        allTracksJs.append(trackJs)
+        
+        # create single config in trackdirectory
+        singleTrackJs = tracklistJsTemplate
+        searchReplace = {
+            '{session.paddedCounter}': jamConf.jamSession.paddedCounter,
+            '{session.dirName}': jamConf.jamSession.dirName,
+            '{trackItems}': trackJs,
+            '{hostLevel}': 'track'
+        }
+        for search in searchReplace:
+            singleTrackJs = singleTrackJs.replace(search, str(searchReplace[search]))
+
+        track.tracklistJsFile.write_text(singleTrackJs)
+    
+    
+    # create another config in sessions directory
+    trackJs = tracklistJsTemplate
+    searchReplace = {
+        '{session.paddedCounter}': jamConf.jamSession.paddedCounter,
+        '{session.dirName}': jamConf.jamSession.dirName,
+        '{trackItems}': ',\n'.join(allTracksJs),
+        '{hostLevel}': 'tracklist'
+    }
+    for search in searchReplace:
+        trackJs = trackJs.replace(search, str(searchReplace[search]))
+
+    tracklistJsFile = Path('%s/data/%s/data/tracklist.js' % (
+        jamConf.wsp.targetDir,
+        jamConf.jamSession.dirName
+    ))
+    
+    tracklistJsFile.write_text(trackJs)
+    
+
+    # create stemplayer symlink and the html document symlink for single session    
+    symlink(
+        '../../stemplayer',
+        ('%s/data/%s/data/stemplayer' % ( str(jamConf.wsp.targetDir), jamConf.jamSession.dirName) )
+    )
+    symlink(
+        ('../../%s' % jamConf.wsp.baseHtmlName),
+        ('%s/data/%s/%s.htm' % (str(jamConf.wsp.targetDir), jamConf.jamSession.dirName, az09(jamConf.jamSession.dirName)) )
+    )
+    
+    
+    
+    # create another config for all sessions to append
+    trackJs = tracklistJsTemplate
+    searchReplace = {
+        '{session.paddedCounter}': jamConf.jamSession.paddedCounter,
+        '{session.dirName}': jamConf.jamSession.dirName,
+        '{trackItems}': ',\n'.join(allTracksJs),
+        '{hostLevel}': 'sessionlist'
+    }
+    for search in searchReplace:
+        trackJs = trackJs.replace(search, str(searchReplace[search]))
+
+    sessionlistJsFile = Path('%s/data/tracklist.js' % jamConf.wsp.targetDir)
+    # in case it already exist we have to inject to the beginning of the file
+    if sessionlistJsFile.is_file():
+        trackJs = trackJs + getFileContent(str(sessionlistJsFile))
+    
+    sessionlistJsFile.write_text(trackJs)
+
 
 def sortStems(stemsList):
     global jamConfig
@@ -813,7 +908,7 @@ def validateConfig():
                 break
             #print ( "pattern: %s" % pattern )
 
-        # append number suffix in case we have same filenames in different directories
+        # append number suffix in case we have identical filenames in different subdirectories
         newName = getUniqueName( newName, stemFilesNames)
 
         stemFilesNames[ inputFile.resolve() ] = newName
@@ -867,8 +962,16 @@ def validateConfig():
     jamConf.jamSession.counter = counter
     jamConf.jamSession.paddedCounter = paddedCounter
     
-    # TODO add parsing format and output format to config and use today as fallback
-    jamConf.jamSession.dateString = config.get('general', 'sessiondate', fallback=str(datetime.datetime.now().year))
+    # parse date string
+    dateString = config.get('general', 'sessiondate', fallback=str(datetime.datetime.now().year))
+    pattern = "(\d{4})\.?(\d{1,2})?\.?(\d{1,2})?"
+    match = re.match( pattern, dateString)
+    if match:
+        jamConf.jamSession.day = ("%02d" )%int(match.group(3))  if match.group(3) else '??'
+        jamConf.jamSession.month = datetime.date(1900, int(match.group(2)), 1).strftime('%b') if match.group(2)  else '???'
+        jamConf.jamSession.year = match.group(1) if match.group(1)  else '????'
+
+    jamConf.jamSession.dateString = dateString
 
     jamConf.jamSession.dirName = config.get( 'general', 'dirScheme' ) \
         .replace( '{bandname}', config.get('general', 'bandname') ) \
@@ -900,7 +1003,6 @@ def validateConfig():
 
     if len(jamConf.jamSession.tracks) > 0:
         # we dont need any split detection if we have configured splits
-        print ( 'AAAAA')
         jamConf.silenceDetection = SilenceDetection(False)
     else:
         # we dont need any split detection if disabled by config
@@ -908,7 +1010,6 @@ def validateConfig():
             print ( 'BBBBB')
             jamConf.silenceDetection = SilenceDetection(False)
         else:
-            print ( 'CCCCC')
             jamConf.silenceDetection = SilenceDetection(True)
             jamConf.silenceDetection.autoDetectResultFile = Path('%s/silence_detect_result.txt' % str(jamConf.tempDir))
 
@@ -946,6 +1047,9 @@ def validateConfig():
             return False
         if not wsp.stemConfigTemplate.is_file():
             print( colored ( "player stem template file \'%s\' does not exist" % str(wsp.stemConfigTemplate), "red" ) )
+            return False
+        if not wsp.tracklistConfigTemplate.is_file():
+            print( colored ( "player tracklist template file \'%s\' does not exist" % str(wsp.tracklistConfigTemplate), "red" ) )
             return False
         wsp.targetDir = Path(config.get('webstemplayer', 'targetDir'))
         if not wsp.targetDir.is_dir():
@@ -1026,6 +1130,8 @@ def splitConfToTracks(autoDetected = None):
         track.trackLetter = trackLetter
         track.trackNumber = trackNumber
         track.trackNumberPaddedZero = ("%02d" ) % trackNumber
+        track.dirName = az09( "%s%s-%s" % (jamConf.jamSession.paddedCounter, track.trackLetter, track.trackTitle) )
+        
         track.duration = track.endSecond - track.startSecond
         track.artist = config.get('general', 'bandname')
         track.genre = config.get('general', 'genre')
@@ -1074,19 +1180,87 @@ def searchAudioSourceFiles():
 
 def getRandomTrackName():
     global config
-    # TODO try to skip words that has been used already
-    # TODO try to avoid duplicate final tracknames over all tracknames of all sessions
-    prefixes = config.get('tracknames', 'prefixes').split()
-    suffixes = config.get('tracknames', 'suffixes').split()
-    random.shuffle(prefixes)
-    random.shuffle(suffixes)
+    
+    if len(jamConf.randomTracknames['usedTrackTitleWords']) == 0:
+        jamConf.randomTracknames['usedTrackTitles'] = getFileContent(
+            '%s/../.usedTracktitles' % str(jamConf.programDir)
+        ).split('\n')
+        jamConf.randomTracknames['usedTrackTitleWords'] = ' '.join(jamConf.randomTracknames['usedTrackTitles']).split()
+    
+    
+    
+    if len(jamConf.randomTracknames['prefixes']) == 0:
+        items = removeOftenUsedListItems(
+            config.get('tracknames', 'prefixes').split(),
+            jamConf.randomTracknames['usedTrackTitleWords'],
+            50
+        )
+        # remove duplicates
+        jamConf.randomTracknames['prefixes'] = list(set(items))
+    if len(jamConf.randomTracknames['suffixes']) == 0:
+        items = removeOftenUsedListItems(
+            config.get('tracknames', 'suffixes').split(),
+            jamConf.randomTracknames['usedTrackTitleWords'],
+            50
+        )
+        # remove duplicates
+        jamConf.randomTracknames['suffixes'] = list(set(items))
+    
+    # shuffle words list
+    random.shuffle(jamConf.randomTracknames['prefixes'])
+    random.shuffle(jamConf.randomTracknames['suffixes'])
+
+    # pick the first
+    chosenPrefix = jamConf.randomTracknames['prefixes'][0]
+    chosenSuffix = jamConf.randomTracknames['suffixes'][0]
+    
+    # remove chosen item to avoid duplicates
+    jamConf.randomTracknames['prefixes'].remove(chosenPrefix)
+    jamConf.randomTracknames['suffixes'].remove(chosenSuffix)
     
     # drop prefix or suffix sometimes
     if random.randint(1,100) > 85:
-        return (prefixes[0] if random.randint(1,100) < 50 else suffixes[0])
+        finalTrackTitle = chosenPrefix if random.randint(1,100) < 20 else chosenSuffix
+    else:
+        # TODO avoid endless recursion caused by configuration quirks
+        if chosenPrefix == chosenSuffix:
+            return getRandomTrackName()
+        finalTrackTitle = "%s %s" % (chosenPrefix, chosenSuffix)
     
-    return ( "%s %s" % (prefixes[0], suffixes[0]) )
+    # vice versa check against ".usedTracktitles"
+    if finalTrackTitle in jamConf.randomTracknames['usedTrackTitles']:
+        # TODO avoid endless recursion caused by configuration quirks
+        return getRandomTrackName()
 
+    return finalTrackTitle
+
+def removeOftenUsedListItems( allItems, usedItems, neededAmount):
+    if len(allItems) < neededAmount:
+        return allItems
+    
+    weighted = {}
+    for item in allItems:
+        for usedItem in usedItems:
+            if not item in weighted:
+                weighted[item] = 0
+            if item == usedItem:
+                weighted[item] = weighted[item] +1
+                
+    # group itmes by count
+    groupedByCount = {}
+    for key,value in sorted(enumerate(weighted), reverse=True):
+        if not weighted[value] in groupedByCount:
+           groupedByCount[ weighted[value] ] = []
+        groupedByCount[ weighted[value] ].append(value)
+    
+    finalItems = []
+    for key in sorted(groupedByCount.keys()):
+        finalItems = finalItems + groupedByCount[key]
+        if len(finalItems) >= neededAmount:
+            return finalItems
+            
+    return finalItems
+    
 
 if __name__ == '__main__':
     main()
