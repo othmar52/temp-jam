@@ -60,6 +60,7 @@ import json
 import os
 import re
 import logging
+import hashlib
 import random
 import secrets
 from shutil import copyfile, copytree, rmtree
@@ -234,9 +235,13 @@ class JamConf(object):
         }
 
 class SilenceDetection(object):
-    def __init__(self, activate):
+    def __init__(self, activate, templateDir):
+        self.templateDir = templateDir
         self.activate = activate
         self.autoDetectResultFile = None
+        self.htmlTemplate = Path('%s/splitConfirm.htm' % str(self.templateDir))
+        self.playerDir = Path('%s/data/stemplayer' % str(self.templateDir))
+        self.jsTemplate = Path('%s/splitConfirmTemplate.js' % str(self.templateDir))
         
 
 def main():
@@ -287,10 +292,9 @@ def main():
         print ( colored ( "exiting due to config errors...", "red" ) )
         sys.exit()
   
-    for i in range(20):
-       print( getRandomTrackName() )
-       
-    sys.exit()
+    #for i in range(20):
+    #   print( getRandomTrackName() )
+    #sys.exit()
   
 
     if jamConf.mp3Mix['isRequired'] == True:
@@ -325,7 +329,7 @@ def main():
         
     # TODO parse debug conf for non removal of temp files
     print (" removing temp files %s" % str(jamConf.tempDir) )
-    #rmtree(jamConf.tempDir)
+    rmtree(jamConf.tempDir)
     
     print ( 'EXIT in __main__' )
     sys.exit()
@@ -342,7 +346,20 @@ def runSilenceDetection():
     global jamConf
     if not jamConf.silenceDetection.activate:
         return
-    
+   
+    # TODO replace symlinks with hardcopies
+    #copyfile(str(jamConf.silenceDetection.htmlTemplate), '%s/splitConfirm.htm' % str(jamConf.tempDir))
+    #copytree(str(jamConf.silenceDetection.playerDir), '%s/stemplayer' % str(jamConf.tempDir))
+
+    symlink(
+        '../../webStemPlayer/data',
+        ('%s/data' % str(jamConf.tempDir))
+    )
+    symlink(
+        '../../webStemPlayer/splitConfirm.htm',
+        ('%s/splitConfirm.htm' % str(jamConf.tempDir) )
+    )
+
     # check if we already have a silence detection result
     if jamConf.silenceDetection.autoDetectResultFile.is_file():
         silenceDetectResultToConfigFile()
@@ -352,8 +369,22 @@ def runSilenceDetection():
     if not jamConf.fullLengthWavMix.is_file():
         _doing('create full length mixdown')
         createFullLenghtWavMix()
-        _done()
         
+
+        
+        _done()
+    mixPeakFile = Path('%s.peaks.txt' % jamConf.fullLengthWavMix)
+    if not mixPeakFile.is_file():
+        wavPeaks = extractWavPeaks(
+            ('%s/scripts/wavPeaks.php' % jamConf.programDir),
+            jamConf.fullLengthWavMix,
+            10000
+        )
+        mixPeakFile.write_text('\n'.join(wavPeaks))
+    else:
+        wavPeaks = getFileContent(mixPeakFile).split('\n')
+        
+    #print(wavPeaks)
     # detect silence of mix and create track boundries based on result
     _doing('detecting split points')
     silences = detectSilences(jamConf.fullLengthWavMix)
@@ -362,8 +393,18 @@ def runSilenceDetection():
     
     jamConf.silenceDetection.autoDetectResultFile.write_text('\n'.join(suggestedTracks))
     
+    # create javascript file for split confirmation
+    splitConfirmJsTemplate = getFileContent(str(jamConf.silenceDetection.jsTemplate))
     
-    #print(suggestedTracks)
+    searchReplace = {
+        '{mix.peaks}': lineBreakedJoin(wavPeaks, ',')
+    }
+    for search in searchReplace:
+        splitConfirmJsTemplate = splitConfirmJsTemplate.replace(search, str(searchReplace[search]))
+
+    
+    splitConfirmJsFile = Path('%s/splitConfirmConf.js' % jamConf.tempDir)
+    splitConfirmJsFile.write_text(splitConfirmJsTemplate)
     
     silenceDetectResultToConfigFile()
 
@@ -983,13 +1024,21 @@ def validateConfig():
     if config.get('general', 'noSpecialChars') == '1':
         jamConf.jamSession.dirName = az09(jamConf.jamSession.dirName)
         
-    jamConf.targetDir = Path(config.get('general', 'targetDir'))
+    jamConf.targetDir = Path(config.get('general', 'targetDir').replace('{SCRIPT_PATH}', str(jamConf.programDir)) )
     if not jamConf.targetDir.is_dir():
         msg = "target directory \'%s\' does not exist" % jamConf.targetDir.resolve()
         raise argparse.ArgumentTypeError(msg)
         return False
 
-    jamConf.tempDir = Path('%s/%s/temp' % (str(jamConf.targetDir), jamConf.jamSession.dirName))
+    # to use unique temp directory we create a hidden file in sourceDir
+    tempDirNameFile = Path('%s/.tempdir' % str(jamConf.sourceDir))
+    if not tempDirNameFile.is_file():
+        tempHash = hashlib.md5(str(jamConf.sourceDir).encode('utf-8')).hexdigest()[:6]
+        tempDirNameFile.write_text(tempHash)
+    else:
+        tempHash = getFileContent(tempDirNameFile).split()[0]
+    
+    jamConf.tempDir = Path('%s/temp-%s' % (str(jamConf.targetDir), tempHash))
     jamConf.tempDir.mkdir(parents=True, exist_ok=True)
     
     jamConf.fullLengthWavMix = Path("%s/full_length_mix_merged_not_normalized.wav" % str(jamConf.tempDir) )
@@ -1007,10 +1056,9 @@ def validateConfig():
     else:
         # we dont need any split detection if disabled by config
         if config.get('enable', 'silenceDetect') != '1':
-            print ( 'BBBBB')
-            jamConf.silenceDetection = SilenceDetection(False)
+            jamConf.silenceDetection = SilenceDetection(False, config.get('silencedetect', 'templateDir'))
         else:
-            jamConf.silenceDetection = SilenceDetection(True)
+            jamConf.silenceDetection = SilenceDetection(True, config.get('silencedetect', 'templateDir'))
             jamConf.silenceDetection.autoDetectResultFile = Path('%s/silence_detect_result.txt' % str(jamConf.tempDir))
 
     if config.get('enable', 'mp3splits') == '1':

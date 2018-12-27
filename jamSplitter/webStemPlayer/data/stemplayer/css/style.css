@@ -224,6 +224,9 @@ input[type=range]::-ms-fill-upper {
 .page__loader h3 {
   color: #131d37;
 }
+.page__loader .msg__error {
+  color: #d64343;
+}
 
 .page__header {
   display: flex;

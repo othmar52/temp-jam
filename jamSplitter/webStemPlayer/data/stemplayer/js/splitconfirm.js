@@ -1,68 +1,5 @@
+ 
 
-/**
- * STEMPLAYER EXPERIMENT
- * play multi track audios via file:/// or http[s]:// protocol
- *
- * TODO
- * welcome screen
- *      timeinterval to start with first track
- * 
- *      single session
- *          with tracklist of all availabls stems of jamsession
- * 
- *      all sessions
- *          
- *  
- *  diagramme für musizierzeit
- *      per session
- *      per alle sessions
- * 
- * welcome screen for single session html opening (not the logo screen thingy)
- * invisible seek click area to include the horizontal stem gaps for seeking
- * on resize (decrease viewport width) the stemplayer position is shit
- * audio preloader for online version (as stem sum avarage size ist 80MB per track)
- * mousemove events with pressed mousebutton on seekbar?
- * seekZero area with more tolerance than actual pixel
- * error page in case we have missing configuration
- * add some kind of search (tracknames, musicians,...)
- * any kind of visualization of actual volume values per stem during vol change  (title attribute?)
- * implement bpm tapper for manual bpm suggestion
- * 
- * play() is called too early: https://developers.google.com/web/updates/2017/06/play-request-was-interrupted
- * remember changed volume levels per session (local storage?)
- * 
- * separate html file just for detecting mix spit points???
- * unify classnames/id's (tool__action--mute, volClickArea, seekprogress)
- * improve intervaled sync between all audio stem tracks (example every 5 seconds)
- * rename volProgress to volLevel as there is no progress
- * play random track on track end
- * 
- * include suggestion for installing tiny http server with howto -> research
- * 
- * sass --watch style.scss style.css
- * 
- * NICE2HAVE
- *      pegel / mute zustände für einzeltrack über button speichern -> global für alle user
- *      stern rating system auf trackebene (session erbt nach oben)
- *          rating ergebnis 
- *      kommentieren eines tracks oder einer einzelspur
- * 
- * NAME
- *  JAM
- *      youjam
- *      jamplayer
- *      jammer
- *      stem sessions
- *      jam sessions
- *      stem jam
- *      jam2stem
- *      Rehearsal
- * 
- * https://github.com/GoogleChromeLabs/simplehttp2server
- * 
- * implement bpm tapper. @see http://www.beatsperminuteonline.com/
- * 
- */
 let waveformSettings = {
     waveColor: '#FF9C01',
     barWidth: 1,
@@ -80,28 +17,6 @@ let waveformSettings = {
     }
 }
 
-/**
- * when served over http we need subdomains for audio
- * because browser refuses to load more than 4 audio resources from same origin simultaneously
- * ensure that the CORS headers on serving origins are set correctly
- *   Header set Access-Control-Allow-Origin "*"
- *   Header set Access-Control-Allow-Methods: "GET"
- * 
- * TODO: use HTTP2 
- *
- */
-let httpSettings = {
-    enable: true,
-    audioPathSubstitutions: [
-        'http://stem1.stromwerk.playground/MUSIC/stromwerk/%s',
-        'http://stem2.stromwerk.playground/MUSIC/stromwerk/%s',
-        'http://stem3.stromwerk.playground/MUSIC/stromwerk/%s',
-        'http://stem4.stromwerk.playground/MUSIC/stromwerk/%s',
-        'http://stem5.stromwerk.playground/MUSIC/stromwerk/%s',
-        'http://stem6.stromwerk.playground/MUSIC/stromwerk/%s',
-        'http://stem7.stromwerk.playground/MUSIC/stromwerk/%s'
-    ]
-}
 
 window.currentView = 'sessionList';
 window.currentSession = null;
@@ -115,34 +30,20 @@ document.addEventListener('DOMContentLoaded', async function() {
     drawFavicon();
     renderLoadingView();
     let renderFunc = '';
-    if (await checkConfig() === false) {
-        $('.msg__error').innerHTML = '<strong>DAMMIT!</strong><br>configuration error...';
-        return;
-    }
+
     $('.path__progress').style.opacity = 0;
     $('.page__loader h1').style.color = '#60d4ff';
     Array.from($$('.page__loader .path__logo')).forEach(function(element) {
       element.style.fill = '#60d4ff';
     });
     $('.msg__success').innerHTML = 'enjoy';
-    if(window.currentView === 'singleTrack') {
-        renderFunc = 'renderTrackView';
-    }
-    if(window.currentView === 'trackList') {
-        renderFunc = 'renderTracklist';
-    }
-    if(window.currentView === 'sessionList') {
-        renderFunc = 'renderSessionlist';
-    }
-    if(renderFunc === '') {
-        console.log('ERROR: invalid view');
-    }
+
     setTimeout(
         function(){
             $('.page').innerHTML = '';
-            window[renderFunc]();
+            renderTrackView();
         },
-        2000
+        200
     );
 
     
@@ -187,30 +88,6 @@ let load = (function() {
   }
 })();
 
-function substituteAudioPathsWithHttpUrls(sessionIndex, trackIndex) {
-    if(document.location.protocol === 'file:') {
-        return false;
-    }
-    if(httpSettings.enable !== true) {
-        return false;
-    }
-    if(httpSettings.audioPathSubstitutions.length < 1) {
-        return false;
-    }
-    let stems = window.stemSessions[sessionIndex].tracks[trackIndex].stems;
-    let availableSubstitutions = httpSettings.audioPathSubstitutions.length;
-    let currentSubstitution = 0
-    stems.forEach(function(stem, stemIndex) {
-
-        let httpAudioPath = httpSettings.audioPathSubstitutions[currentSubstitution];
-        window.stemSessions[sessionIndex].tracks[trackIndex].stems[stemIndex].filePath = httpAudioPath.replace('%s', window.stemSessions[sessionIndex].tracks[trackIndex].stems[stemIndex].filePath );
-        currentSubstitution++;
-        if(currentSubstitution === availableSubstitutions) {
-            currentSubstitution = 0;
-        }
-    });
-    return true;
-}
 
 
 /**
@@ -227,7 +104,6 @@ function prefixAudioPaths(sessionIndex, trackIndex, pathPrefix) {
         window.stemSessions[sessionIndex].tracks[trackIndex].stems[stemIndex].filePath = pathPrefix + stem.filePath;
         window.stemSessions[sessionIndex].tracks[trackIndex].stems[stemIndex].pathCorrectionDone = true;
     });
-    substituteAudioPathsWithHttpUrls(sessionIndex, trackIndex);
 }
 
 
@@ -296,8 +172,6 @@ async function checkConfig() {
         console.log("config error");
         return false;
     }
-    // in case sessions or tracks had been deleted in filesystem...
-    calculateDurations()
     // directly select session as we have no other sessions to choose from
     if(Object.size(window.stemSessions) === 1) {
         window.currentView = 'trackList';
@@ -318,35 +192,6 @@ async function checkConfig() {
     }
 }
 
-function calculateDurations() {
-    window.allSessions = {
-      count: 0,
-      trackCount: 0,
-      duration: 0 
-      
-    };
-    for(let sessionIdx in window.stemSessions) {
-        let sessionDuration = 0;
-        let stemTitlesSession = {};
-        for(let trackIdx in window.stemSessions[sessionIdx].tracks) {
-            sessionDuration += window.stemSessions[sessionIdx].tracks[trackIdx].duration;
-            window.allSessions.trackCount++;
-            let stemTitlesTrack = {};
-            for(let stemIdx in window.stemSessions[sessionIdx].tracks[trackIdx].stems) {
-                const stemTitle = window.stemSessions[sessionIdx].tracks[trackIdx].stems[stemIdx].title;
-                const stemColor = window.stemSessions[sessionIdx].tracks[trackIdx].stems[stemIdx].color;
-                stemTitlesTrack[stemTitle] = stemColor;
-                stemTitlesSession[stemTitle] = stemColor;
-            }
-            window.stemSessions[sessionIdx].tracks[trackIdx].stemTitles =  stemTitlesTrack;
-        }
-        window.stemSessions[sessionIdx].duration = sessionDuration;
-        window.stemSessions[sessionIdx].stemTitles = stemTitlesSession;
-        
-        window.allSessions.count ++;
-        window.allSessions.duration += sessionDuration;
-    }
-}
 
 /* genreal helper functions */
 function $(elem) {
@@ -381,78 +226,6 @@ function realDomInjection(markup, targetSelector, position='inside') {
         $(targetSelector).appendChild(dummyWrapper.childNodes[0]);
     }
 }
-
-function renderSessionlist() {
-    $('body').classList.add('sessionlistView');
-    $('body').classList.remove('tracklistView');
-    $('body').classList.remove('trackView');
-
-    let sessionlistTemplate = $('#sessionList-markup').innerHTML;
-    let sessionlistItemTemplate = $('#sessionListItem-markup').innerHTML;
-    let sessionlistItemsMarkup = $('#sessionListTableHeader-markup').innerHTML;
-    for(idx in window.stemSessions) {
-        let session = window.stemSessions[idx];
-        // substitute template markers for single items
-        let sessionlistItemMarkup = substituteSessionProperties(sessionlistItemTemplate, session);
-        sessionlistItemsMarkup += sessionlistItemMarkup;
-    };
-    
-    sessionlistItemsMarkup = '<table class="session__list">' + sessionlistItemsMarkup + '</table>';
-    // substitute template markers
-    sessionlistTemplate = sessionlistTemplate.replace(/{sessionlistItems}/g, sessionlistItemsMarkup)
-        .replace(/{sessions.count}/g, window.allSessions.count)
-        .replace(/{sessions.trackCount}/g, window.allSessions.trackCount)
-        .replace(/{sessions.duration}/g, secondsToHours(window.allSessions.duration))
-        .replace(/{mainNav}/g, $('#main-nav-markup').innerHTML);
-        
-        
-        
-    realDomInjection(sessionlistTemplate, '.page');
-
-    // add event listeners for tracklist
-    Array.from($$('.navigate')).forEach(function(element) {
-      element.addEventListener('click', navigate);
-    });
-}
-
-function renderTracklist() {
-    $('body').classList.remove('sessionlistView');
-    $('body').classList.add('tracklistView');
-    $('body').classList.remove('trackView');
-    removeAllEventListeners();
-    $('.page').innerHTML = '';
-
-    let tracklistTemplate = $('#trackList-markup').innerHTML;
-    let tracklistItemTemplate = $('#trackListItem-markup').innerHTML;
-    //let tracklistItemsMarkup = '';
-    let tracklistItemsMarkup = $('#trackListTableHeader-markup').innerHTML;
-    for(idx in window.stemSessions[window.currentSession].tracks) {
-        let track = window.stemSessions[window.currentSession].tracks[idx];
-        // substitute template markers for single items
-        let tracklistItemMarkup = substituteTrackProperties(tracklistItemTemplate, track)
-            .replace(/{session.index}/g, window.currentSession);
-        
-        tracklistItemsMarkup += tracklistItemMarkup;
-    };
-    // too bad .innerHTML does not allow invalid markup
-    // so we have to place wrapping table markup here and not withen the <template> container ...
-    //tracklistItemsMarkup = '<table class="track__list"><thead>' + $('#trackListTableHeader-markup').innerHTML + '</thead><tbody>' + tracklistItemsMarkup + '</tbody></table>';
-    tracklistItemsMarkup = '<table class="track__list"><tbody>' + tracklistItemsMarkup + '</tbody></table>';
-    
-    // substitute template markers
-    //console.log(tracklistTemplate);
-    tracklistTemplate = substituteSessionProperties(tracklistTemplate, window.stemSessions[window.currentSession])
-        .replace(/{albumTitle}/g, window.stemSessions[window.currentSession].title)
-        .replace(/{mainNav}/g, $('#main-nav-markup').innerHTML)
-        .replace(/{tracklistItems}/g, tracklistItemsMarkup);
-    realDomInjection(tracklistTemplate, '.page');
-
-    // add event listeners for tracklist view
-    Array.from($$('.navigate')).forEach(function(element) {
-      element.addEventListener('click', navigate);
-    });
-}
-
 
 
 function getStemTitlesMarkup(stemTitles) {
@@ -497,6 +270,20 @@ function removeAllEventListeners() {
     body.parentNode.replaceChild(bodyClone,body);
 }
 
+function getValuesChunk(values, fromPercent, toPercent) {
+    
+    const beginWith = values.length * fromPercent * 0.01;
+    const endWith = values.length * toPercent * 0.01;
+    let reduced = [];
+    values.forEach(function(value, idx){
+        if(idx < beginWith || idx > endWith) {
+            return;
+        }
+        reduced.push(value);
+    });
+    return reduced;
+}
+
 /* render functions for different views */
 function renderTrackView(autoplay) {
     $('body').classList.remove('sessionlistView');
@@ -508,83 +295,49 @@ function renderTrackView(autoplay) {
     let trackviewTemplate = $('#track-markup').innerHTML;
     let stemWrapperTemplate = $('#stemTrack-markup').innerHTML;
 
-    // create all audio elements
+    // create a single audio elements
+    
+    let lines = 3;
+    
+    
     let stemtracksTemplate = '';
-    window.stemSessions[window.currentSession].tracks[window.currentTrack].stems.forEach(function(stem, idx) {
-        window.stemState['player'+idx] = {
-            isMuted: false,
-            isSoloed: false,
-            isIsolated: false,
-            volLevel: stem.volume
-        };
+    
+    for(let idx = 0; idx < lines; idx ++) {
+
 
         // substitute template markers
         let stemWrapperMarkup = stemWrapperTemplate;
         stemWrapperMarkup = stemWrapperMarkup
-            .replace(/{index}/g, idx)
-            .replace(/{audiosource}/g, stem.filePath)
-            .replace(/{color}/g, stem.color)
-            .replace(/{title}/g, stem.title);
-
+            .replace(/{index}/g, idx);
         stemtracksTemplate += stemWrapperMarkup;
         
-    });
-    let trackNavItemTemplate = $('#trackBulletNavigation-markup').innerHTML;
-    let trackNavigationMarkup = ''
-    for(let trackIdx in window.window.stemSessions[window.currentSession].tracks) {
-        let trackNavItemMarkup = trackNavItemTemplate;
-        let track = window.stemSessions[window.currentSession].tracks[trackIdx];
-        trackNavItemMarkup = substituteTrackProperties(trackNavItemMarkup, track)
-            .replace(/{session.index}/g, window.currentSession)
-            .replace(/{session.title}/g, window.stemSessions[window.currentSession].title)
-            .replace(/{active}/g, ((window.currentTrack === trackIdx ) ? 'active': ''));
-        trackNavigationMarkup += trackNavItemMarkup;
-    }
-    let track = window.stemSessions[window.currentSession].tracks[window.currentTrack];
-    document.title = track.trackNumber + '-' + track.title + ', ' + window.stemSessions[window.currentSession].title;
-    trackviewTemplate = substituteSessionProperties(trackviewTemplate, window.stemSessions[window.currentSession])
-        .replace(/{mainNav}/g, $('#main-nav-markup').innerHTML)
+    };
 
-        
-        .replace(/{trackNavigation}/g, trackNavigationMarkup)
-        .replace(/{trackNumber}/g, track.trackNumber)
-        .replace(/{track.title}/g, track.title)
-        .replace(/{track.bpm}/g, track.bpm)
+    //document.title = track.trackNumber + '-' + track.title + ', ' + window.stemSessions[window.currentSession].title;
+    //trackviewTemplate = substituteSessionProperties(trackviewTemplate, window.stemSessions[window.currentSession])
+     //   ;
+    trackviewTemplate = trackviewTemplate
+        //.replace(/{mainNav}/g, $('#main-nav-markup').innerHTML)
+        //.replace(/{trackNavigation}/g, trackNavigationMarkup)
+        //.replace(/{trackNumber}/g, track.trackNumber)
+        //.replace(/{track.title}/g, track.title)
+        //.replace(/{track.bpm}/g, track.bpm)
         .replace(/{stemTracks}/g, stemtracksTemplate);
     //console.log(trackviewTemplate);
     realDomInjection(trackviewTemplate, '.page');
-    window.stemSessions[window.currentSession].tracks[window.currentTrack].stems.forEach(function(stem, idx) {
-        // set width of volume slider
-        $('#tool__action--volume'+idx).value = stem.volume;
+    for(let idx = 0; idx < lines; idx ++) {
 
         // draw waveform
-        if(stem.peaks) {
+        if(window.splitConf.mix.peaks) {
             drawWaveform(
                 $('#waveform__wrapper'+idx),
-                stem.peaks,
-                waveformSettings.colors[stem.color]
+                getValuesChunk(window.splitConf.mix.peaks, idx*(100/lines), (idx+1)*(100/lines)),
+                waveformSettings.colors[window.splitConf.mix.color]
             );
         }
-        // createMediaElementSource() does not work for file:/// protocol
-        if(document.location.protocol === 'file:') {
-            return
-        }
-
-        // create volume meter
-        let audioElement = $('#player'+idx);
-        let meterElement = document.createElement('div');
-        meterElement.setAttribute('id', 'dbmeter'+idx);
-        meterElement.setAttribute('class', 'dbmeter');
-        $('#line_meta'+idx).insertBefore(meterElement, $('#line_meta'+idx).firstChild);
-        let webAudioPeakMeter = new WebAudioPeakMeter();
-        audioElement.crossOrigin = 'anonymous';
-        let sourceNode = window.audioCtx.createMediaElementSource(audioElement);
-        sourceNode.connect(window.audioCtx.destination);
-        let meterNode = webAudioPeakMeter.createMeterNode(sourceNode, window.audioCtx);
-        webAudioPeakMeter.createMeter(meterElement, meterNode, {});
         
 
-    });
+    };
     // attach event listeners for view
     let player = $('#player0');
     

@@ -1,0 +1,137 @@
+ 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>jam - split confirm</title>
+  <link rel="stylesheet" href="data/stemplayer/css/style.css">
+</head>
+<body>
+<div class="page session">
+
+</div>
+
+<template id="loader-markup">
+    <div class="page__loader">
+    <svg width="166" height="166" xmlns="http://www.w3.org/2000/svg" >
+        <circle cx="82" cy="82" r="82" stroke="none" fill="#020724" />
+        <circle class="path__progress" cx="-82" cy="82" r="80" fill="none" stroke="#60d4ff" stroke-width="5" stroke-dasharray="502.655" stroke-dashoffset="502.655" />
+        <g transform="translate(0.000000,82.000000) scale(0.100000,-0.100000)" stroke="none">
+            <path class="path__logo" style="stroke:none;" d="m898 408 l32 -5 0 -125 c0 -115 -1 -125 -17 -118 -35 14 -140 17 -176 6 -51 -17 -122 -84 -141 -133 -22 -54 -13 -109 25 -153 41 -46 76 -58 158 -53 82 4 135 35 186 107 l30 43 5 198 5 198 74 -49 c79 -52 179 -89 241 -89 46 0 59 -24 36 -68 -18 -34 -76 -87 -105 -97 -18 -5 -21 -14 -21 -69 0 -163 -92 -306 -243 -377 -119 -55 -240 -58 -370 -9 -75 28 -173 118 -215 197 -128 240 13 529 291 599 49 12 125 11 205 -3z"/>
+        </g>
+    </svg>
+    <div>
+    <h1>jam</h1>
+    <h3>creating mixdown<br />0%</h3>
+    <div class="msg__error"></div>
+    <div class="msg__success"></div>
+</template>
+
+<template id="track-markup">
+  <header class="page__header">
+    <h1 class="page__title">
+      <span class="view"><span class="view__highlight">Sp</span>lits</span>
+      <span class="page__additional">Stromwerk</span>
+    </h1>
+    <ul class="page__info session__list">
+      <li class="session__item">
+        <time class="session__date date">
+          <span class="date__year">{session.year}</span>
+          <span class="date__wrapper">
+            <span class="date__month">{session.month}</span>
+            <span class="date__day">{session.day}</span>
+          </span>
+        </time>
+      </li>
+      <li class="session__item session__item--session">
+        <a href="#" data-targettype="tracklist" data-targetsession="{session.index}" class="navigate">
+        Session <span class="session__symbol">#</span><span class="session__nr">{session.counter}</span>
+        </a>
+      </li>
+      <li class="session__item">
+        <span class="session__tracks">{session.trackCount}</span> Tracks
+      </li>
+      <li class="session__detail">
+        <span class="session__duration">{session.duration}</span>
+        <span class="session__unit">min</span>
+      </li>
+    </ul>
+  </header>
+
+  <main class="page__wrapper track track--detail">
+    <header class="track__header">
+      <button class="track__play play" title="Play/pause Track „{track.title}“">
+        <svg width="100%" height="100%" viewBox="0 0 36 36" >
+            <defs>
+                <path id="pause-icon" data-state="playing" d="M11,10 L17,10 17,26 11,26 M20,10 L26,10 26,26 20,26" />
+                <path id="play-icon"  data-state="paused"  d="M11,10 L18,13.74 18,22.28 11,26 M18,13.74 L26,18 26,18 18,22.28" />
+            </defs>
+            <use xlink:href="#play-icon" />
+        </svg>
+      </button>
+      <h2 class="track__title">{track.title}</h2>
+      <div class="track__detail">
+        <span class="track__bpm">{track.bpm}</span>
+        <span class="track__unit">bpm</span>
+      </div>
+      <div class="track__detail track__times">
+        <span class="track__current" id="time__elapsed">08:31</span> / 
+        <span class="track__duration" id="time__total">08:31</span>
+      </div>
+
+    </header>
+    <ul class="track__lines">
+      {stemTracks}
+      
+    </ul>
+  </main>
+</template>
+<template id="stemTrack-markup">
+      <li class="track__line line line--color-{color}" id="track__line{index}">
+        <div class="line__wave" id="line__wave{index}">
+            <audio id="player{index}" class="player">
+               <source type="audio/mpeg" src="{audiosource}">
+            </audio>
+            <div id="waveform__wrapper{index}" class="waveform__wrapper"></div>
+            <div class="seek__progress"></div>
+            <div class="seek__clickarea"></div>
+        </div>
+        <div class="line__audio line__audio--left"></div>
+        <div class="line__audio line__audio--right"></div>
+        <div class="line__meta" id="line_meta{index}">
+          <ul class="line__tools tool tool--line">
+            <li class="tool__item">
+                <button class="tool__action tool__action--isolate button" id="tool__action--isolate{index}" data-target="player{index}"><abbr title="Toggle isolate">I</abbr></button>
+            </li>
+            <li class="tool__item">
+                <button class="tool__action tool__action--solo button" id="tool__action--solo{index}" data-target="player{index}"><abbr title="Toggle solo">S</abbr></button>
+            </li>
+            <li class="tool__item">
+                <button class="tool__action tool__action--mute button" id="tool__action--mute{index}" data-target="player{index}"><abbr title="Toggle mute">M</abbr></button>
+            </li>
+          </ul>
+          <div class="line__description">
+            <span class="tool__item tool__item--settings">
+                <button class="tool__action tool__action--settings button" title="Toggle Settings">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+                    <path d="M0 0h24v24H0z" fill="none"/>
+                    <path class="dotpath" d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
+                  </svg>
+                </button>
+            </span>
+            <div class="line__artist artist">
+              jammer
+              <span class="artist__name">{title}</span>
+            </div>
+            <div class="tool__item tool__item--volume">
+                <input type="range" min="0" max="1" step="0.01" class="tool__action tool__action--volume" id="tool__action--volume{index}" value="0" data-target="player{index}">
+            </div>
+          </div>
+        </div>
+      </li>
+</template>
+    <script type="text/javascript" src="splitConfirmConf.js"></script>
+    <script type="text/javascript" src="data/stemplayer/js/splitconfirm.js"></script>
+
+</body>
+</html>

@@ -197,6 +197,9 @@ input[type="range"]::-ms-fill-upper {
   h3 {
     color: mix($darkblue, #000, 60%);
   }
+  .msg__error {
+    color: $red;
+  }
 }
 
 .page__header {
