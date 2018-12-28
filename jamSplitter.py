@@ -286,7 +286,7 @@ def main():
 
     # optional config in source directory with audio files
     sourceDirConfig = Path( '%s/config.txt' % jamConf.sourceDir.resolve() )
-    if localConfig.is_file():
+    if sourceDirConfig.is_file():
         configFiles.append(sourceDirConfig.resolve())
 
     try:
@@ -928,6 +928,10 @@ def getNumericDictIndex(keyToSearch, dictToSearch):
         idx += 1
     return 0
 
+def getConfigPath(confSection, confName):
+    global jamConf
+    return config.get(confSection, confName).replace('{SCRIPT_PATH}', str(jamConf.programDir))
+
 def validateConfig():
     global config, jamConf
     jamConf.allMusicianShorties = getAllMusicianShorties()
@@ -990,7 +994,7 @@ def validateConfig():
     # example inputs "4" "0004" "000005.2" "5 part 2" "Custom Session Counter #66"
     rawCounterInput = config.get('general', 'counter')
     if not rawCounterInput:
-        msg = "no session coutner given"
+        msg = "no session counter given"
         raise argparse.ArgumentTypeError(msg)
         return False
 
@@ -1034,7 +1038,7 @@ def validateConfig():
     if config.get('general', 'noSpecialChars') == '1':
         jamConf.jamSession.dirName = az09(jamConf.jamSession.dirName)
         
-    jamConf.targetDir = Path(config.get('general', 'targetDir').replace('{SCRIPT_PATH}', str(jamConf.programDir)) )
+    jamConf.targetDir = Path(getConfigPath('general', 'targetDir') )
     if not jamConf.targetDir.is_dir():
         msg = "target directory \'%s\' does not exist" % jamConf.targetDir.resolve()
         raise argparse.ArgumentTypeError(msg)
@@ -1062,13 +1066,13 @@ def validateConfig():
 
     if len(jamConf.jamSession.tracks) > 0:
         # we dont need any split detection if we have configured splits
-        jamConf.silenceDetection = SilenceDetection(False, config.get('silencedetect', 'templateDir'))
+        jamConf.silenceDetection = SilenceDetection(False, getConfigPath('silencedetect', 'templateDir'))
     else:
         # we dont need any split detection if disabled by config
         if config.get('enable', 'silenceDetect') != '1':
-            jamConf.silenceDetection = SilenceDetection(False, config.get('silencedetect', 'templateDir'))
+            jamConf.silenceDetection = SilenceDetection(False, getConfigPath('silencedetect', 'templateDir'))
         else:
-            jamConf.silenceDetection = SilenceDetection(True, config.get('silencedetect', 'templateDir'))
+            jamConf.silenceDetection = SilenceDetection(True, getConfigPath('silencedetect', 'templateDir'))
             jamConf.silenceDetection.autoDetectResultFile = Path('%s/silence_detect_result.txt' % str(jamConf.tempDir))
 
     if config.get('enable', 'mp3splits') == '1':
@@ -1077,7 +1081,7 @@ def validateConfig():
             jamConf.normalizeTrackMergeRequired = True
 
     if config.get('tracknames', 'useRandomTracknames') == '1':
-        jamConf.usedTracktitlesFile = Path(config.get('tracknames', 'usedTrackTitlesFile').replace('{SCRIPT_PATH}', str(jamConf.programDir)) )
+        jamConf.usedTracktitlesFile = Path(getConfigPath('tracknames', 'usedTrackTitlesFile') )
         jamConf.usedTracktitlesFile.touch(exist_ok=True)
     
     if config.get('enable', 'bpmDetect') == '1':
@@ -1094,7 +1098,7 @@ def validateConfig():
         if config.get('webstemplayer', 'normalize') == '1':
             jamConf.normalizeStemSplits = True
 
-        wsp = WebStemPlayer(Path(config.get('webstemplayer', 'templateDir')))
+        wsp = WebStemPlayer(Path(getConfigPath('webstemplayer', 'templateDir')))
         if not wsp.templateDir.is_dir():
             print( colored ( "webStemPlayer template directory \'%s\' does not exist" % str(wsp.templateDir), "red" ) )
             return False
@@ -1113,7 +1117,7 @@ def validateConfig():
         if not wsp.tracklistConfigTemplate.is_file():
             print( colored ( "player tracklist template file \'%s\' does not exist" % str(wsp.tracklistConfigTemplate), "red" ) )
             return False
-        wsp.targetDir = Path(config.get('webstemplayer', 'targetDir'))
+        wsp.targetDir = Path(getConfigPath('webstemplayer', 'targetDir'))
         if not wsp.targetDir.is_dir():
             print( colored ( "webStemPlayer targetDir directory \'%s\' does not exist" % str(wsp.targetDir), "red" ) )
             return False
