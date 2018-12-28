@@ -314,16 +314,20 @@ def main():
         print ("no splits. nothing to do...")
    
     printCurrentSplitConfig()
+    
+    usedTrackTitles = []
     if jamConf.maxWorkers == 1:
         # non parallelized version
         for track in jamConf.jamSession.tracks:
             processTrack(track)
+            usedTrackTitles.append(track.trackTitle)
     else:
         # paralellized tryout
         with concurrent.futures.ProcessPoolExecutor(max_workers=jamConf.maxWorkers) as executor:
             for trackIdx,track in enumerate(jamConf.jamSession.tracks):
                 processedTrack = executor.submit(processTrack, (track))
                 processedTrack.add_done_callback(trackProcessorCallback)
+                usedTrackTitles.append(track.trackTitle)
 
         
         # time /MUSIC/_swapfile/stromwerk/00NEW/jamSplitter.py -i /run/media/engine/Stromwerk/raw/0019.1-2017.07.16-coach/raw/
@@ -339,8 +343,26 @@ def main():
     print (" removing temp files %s" % str(jamConf.tempDir) )
     rmtree(jamConf.tempDir)
     
+    persistUsedTrackTitles(usedTrackTitles)
+    persistSessionCounter()
+    
+    
     print ( 'EXIT in __main__' )
     sys.exit()
+
+def persistUsedTrackTitles(usedTrackTitles):
+    if jamConf.usedTracktitlesFile == None:
+        return
+    jamConf.usedTracktitlesFile.write_text(
+        '\n'.join(getFileContent(jamConf.usedTracktitlesFile).split('\n') + usedTrackTitles)
+    )
+
+def persistSessionCounter():
+    if jamConf.lastSessionCounterFile == None:
+        return
+    jamConf.lastSessionCounterFile.write_text(
+        str(jamConf.jamSession.counter)
+    )
 
 def trackProcessorCallback(processedTrack):
     global jamConf
@@ -1083,7 +1105,10 @@ def validateConfig():
     if config.get('tracknames', 'useRandomTracknames') == '1':
         jamConf.usedTracktitlesFile = Path(getConfigPath('tracknames', 'usedTrackTitlesFile') )
         jamConf.usedTracktitlesFile.touch(exist_ok=True)
-    
+
+    jamConf.lastSessionCounterFile = Path(getConfigPath('general', 'lastSessionCounterFile') )
+    jamConf.lastSessionCounterFile.touch(exist_ok=True)
+
     if config.get('enable', 'bpmDetect') == '1':
         jamConf.trackMergeRequired = True
     
