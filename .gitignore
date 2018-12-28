@@ -1,6 +1,9 @@
 _DESIGN/
-jamSplitter/webStemPlayerOld/
 jamSplitter/webStemPlayer/node_modules/
+jamSplitter/jamSplitter.local.conf
+.usedTracktitles
+.lastSessionCounter
+
 
 # Byte-compiled / optimized / DLL files
 *__pycache__*
