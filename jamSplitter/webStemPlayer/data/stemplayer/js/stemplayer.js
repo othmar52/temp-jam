@@ -58,6 +58,9 @@
  *      jam2stem
  *      Rehearsal
  * 
+ * long titles  cause flexbox break
+ *  like: Kennedy Tanning Salon
+ * 
  * https://github.com/GoogleChromeLabs/simplehttp2server
  * 
  * implement bpm tapper. @see http://www.beatsperminuteonline.com/

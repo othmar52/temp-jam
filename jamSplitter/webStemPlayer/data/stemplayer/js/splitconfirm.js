@@ -298,7 +298,8 @@ function renderTrackView(autoplay) {
     // create a single audio elements
     
     let lines = 3;
-    
+    let lineDuration = window.splitConf.mix.duration / lines;
+
     
     let stemtracksTemplate = '';
     
@@ -308,7 +309,10 @@ function renderTrackView(autoplay) {
         // substitute template markers
         let stemWrapperMarkup = stemWrapperTemplate;
         stemWrapperMarkup = stemWrapperMarkup
-            .replace(/{index}/g, idx);
+            .replace(/{index}/g, idx)
+            .replace(/{fromSecond}/g, idx * lineDuration)
+            .replace(/{toSecond}/g, (idx + 1) * lineDuration);
+
         stemtracksTemplate += stemWrapperMarkup;
         
     };
@@ -345,33 +349,30 @@ function renderTrackView(autoplay) {
         if($('.seek__progress') === null) {
             return;
         }
-        // resynchronize all stem tracks every 5 seconds
-        // TODO: is it better to attach an isPlaying listener and use setInterval instead???
-        //if(0.0001 < (player.currentTime % 5)  < 0.1) {
-        if(player.currentTime % window.resyncAfter < 0.1 && player.currentTime % window.resyncAfter  > 0) {
-            resyncStems();
-        }
+
         $('#time__elapsed').innerHTML = formatTime(player.currentTime);
         Array.from($$('.seek__progress')).forEach(function(element) {
-            element.style.width = (player.currentTime +.25)/player.duration*100+'%';
+            if(player.currentTime > element.dataset.tosecond) {
+              element.style.width = '100%';
+              return;
+            }
+            if(player.currentTime < element.dataset.fromsecond) {
+              element.style.width = '0';
+              return;
+            }
+            let diff = player.currentTime % lineDuration;
+            element.style.width = (diff)/lineDuration*100+'%';
+
         });
     });
     player.addEventListener('durationchange', function() {
         $('#time__total').innerHTML = formatTime(player.duration);
     });
-    player.addEventListener('ended', handleTrackEnded, false);
 
     $('.track__play').addEventListener(
         'click', togglePlayPause, false
     );
 
-    $('.tool__action--mute').addEventListener(
-        'click', unmuteAllStems, false
-    );
-
-    $('.tool__action--solo').addEventListener(
-        'click', unsoloAllStems, false
-    );
     Array.from($$('.seek__clickarea')).forEach(function(element) {
         element.addEventListener(
             'click',
@@ -380,22 +381,14 @@ function renderTrackView(autoplay) {
                 let x = e.clientX - rect.left; //x position within the element.
                 let w = e.target.offsetWidth;
                 let percent = x/(w/100);
-                seekPercent(percent);
+                let diff = parseFloat(e.target.dataset.tosecond) - parseFloat(e.target.dataset.fromsecond);
+                let targetSecond = parseFloat(e.target.dataset.fromsecond) + (percent*diff*0.01);
+                $('#player0').currentTime = targetSecond;
+                console.log(percent, targetSecond);
+
             },
             false
         );
-    });
-
-    Array.from($$('.tool__action--isolate')).forEach(function(element) {
-      element.addEventListener('click', toggleIsolateStem);
-    });
-
-    Array.from($$('.tool__action--solo')).forEach(function(element) {
-      element.addEventListener('click', toggleSoloStem);
-    });
-
-    Array.from($$('.tool__action--mute')).forEach(function(element) {
-      element.addEventListener('click', toggleMuteStem);
     });
 
     Array.from($$('.tool__action--volume')).forEach(function(element) {
@@ -403,9 +396,6 @@ function renderTrackView(autoplay) {
       element.addEventListener('input', setVolume);
     });
 
-    Array.from($$('.navigate')).forEach(function(element) {
-      element.addEventListener('click', navigate);
-    });
 
     Array.from($$('.seek__progress')).forEach(function(element) {
       element.style.width = 0;
@@ -417,101 +407,7 @@ function renderTrackView(autoplay) {
 
 }
 
-function getNextSiblings(elem, filter) {
-    var sibs = [];
-    while (elem = elem.nextSibling) {
-        if (elem.nodeType === 3) continue; // text node
-        if (!filter || filter(elem)) sibs.push(elem);
-    }
-    return sibs;
-}
 
-function navigate(e) {
-    e.preventDefault();
-    //try {
-    //    seekPercent(0);
-    //    $('#seekprogress').style.width = 0;
-    //} catch(e) { }
-    removeAllEventListeners();
-    $('.page').innerHTML = '';
-    if(e.currentTarget.dataset.targettype === 'sessionlist') {
-        window.currentSession = null;
-        window.currentTrack = null;
-        renderSessionlist();
-        return;
-    }
-    if(e.currentTarget.dataset.targettype === 'tracklist') {
-        window.currentSession = e.currentTarget.dataset.targetsession;
-        window.currentTrack = null;
-        renderTracklist();
-        return;
-    }
-    if(e.currentTarget.dataset.targettype === 'track') {
-        window.currentSession = e.currentTarget.dataset.targetsession;
-        window.currentTrack = e.currentTarget.dataset.targettrack;
-        renderTrackView(true);
-        return;
-    }
-}
-
-function handleTrackEnded() {
-    // TODO: add random toggler
-    // for now load the next track if available. otherwise stop
-    seekPercent(0);
-    let foundCurrentSession = false;
-    let foundCurrentTrack = false;
-    for(let sessionIdx in window.stemSessions) {
-        if(sessionIdx !== window.currentSession && foundCurrentSession === false) {
-          continue;
-        }
-        for(let trackIdx in window.stemSessions[sessionIdx].tracks) {
-            if(sessionIdx === window.currentSession && trackIdx === window.currentTrack) {
-                foundCurrentSession = true;
-                foundCurrentTrack = true;
-                continue;
-            }
-            if(foundCurrentTrack === true) {
-                window.currentSession = sessionIdx;
-                window.currentTrack = trackIdx;
-                renderTrackView(true);
-                return;
-            }
-        }
-    }
-    console.log('TODO what to do if very last track has ended?');
-    $('#track__play').classList.remove('active');
-}
-/* functions for all stems stems */
-function seekPercent(percent) {
-    let targetSecond = false;
-    for(idx in window.stemState) {
-        let player = $('#'+idx);
-        if(targetSecond === false) {
-            targetSecond = player.duration * percent * 0.01;
-        }
-        player.currentTime = targetSecond;
-    }
-    window.lastResync = window.performance.now();
-}
-function resyncStems() {
-    let deltaLastResync = window.performance.now() - window.lastResync;
-    if(deltaLastResync < window.resyncAfter) {
-        console.log('deltaLastResync skip');
-        return;
-    }
-    
-    let targetSecond = 0;
-    for(idx in window.stemState) {
-        let player = $('#'+idx);
-        if(idx === 'player0') {
-            targetSecond = player.currentTime;
-            window.lastResync = window.performance.now();
-            console.log('resync ' + targetSecond);
-            continue;
-        }
-        player.currentTime = targetSecond;
-    }
-}
 
 // redraw waveforms on resize
 function redrawWaveforms() {
@@ -544,224 +440,24 @@ function debounceResizeEvent(c, t) {
 function togglePlayPause(e) {
     e.preventDefault();
     e.currentTarget.blur();
-    let playerCmd = null;
-    let iconPathId = null;
-    for(playerId in window.stemState) {
-        let player = $('#' + playerId);
-        if(playerCmd === null) {
-            playerCmd = 'pause';
-            iconPathId = '#play-icon';
-            if(player.paused) {
-                playerCmd = 'play';
-                iconPathId = '#pause-icon';
-            }
-        }
-        $('.track__play use').setAttribute( 'xlink:href', iconPathId);
-        player[playerCmd]();
-        player.volume = window.stemState[playerId].volLevel;
-    }
-}
-
-function unmuteAllStems(e) {
-    e.currentTarget.blur();
-    for(playerId in window.stemState) {
-        window.stemState[playerId].isMuted = false;
-    }
-    setVolumesAndButtonStates();
-}
-
-function unsoloAllStems(e) {
-    e.currentTarget.blur();
-    for(playerId in window.stemState) {
-        window.stemState[playerId].isSoloed = false;
-    }
-    setVolumesAndButtonStates();
-}
-
-
-
-
-
-
-
-
-
-
-/* functions for isolate|solo|mute for single stems */
-
-function toggleIsolateStem(e) {
-    e.currentTarget.blur();
-    let playerId = e.currentTarget.dataset.target;
-    if(window.stemState[playerId].isIsolated === true) {
-        unisolateStem(playerId);
-        return;
-    }
-    isolateStem(playerId);
-}
-
-function isolateStem(playerId) {
-    for(idx in window.stemState) {
-        window.stemState[idx].isIsolated = false;
-    }
-    window.stemState[playerId].isIsolated = true;
-    setVolumesAndButtonStates();
-}
-
-function unisolateStem(playerId) {
-    window.stemState[playerId].isIsolated = false;
-    setVolumesAndButtonStates();
-}
-
-function guiUnisolateStem(playerIdx) {
-    $('#tool__action--isolate' + playerIdx).classList.remove('active');
-}
-
-function guiIsolateStem(playerIdx) {
-    $('#tool__action--isolate' + playerIdx).classList.add('active');
-}
-
-function toggleSoloStem(e) {
-    e.currentTarget.blur();
-    let playerId = e.currentTarget.dataset.target;
-    if(window.stemState[playerId].isSoloed === true) {
-        unsoloStem(playerId);
-        return;
-    }
-    soloStem(playerId);
-}
-
-function soloStem(playerId) {
-    window.stemState[playerId].isSoloed = true;
-    setVolumesAndButtonStates();
-}
-
-function unsoloStem(playerId) {
-    window.stemState[playerId].isSoloed = false;
-    setVolumesAndButtonStates();
-}
-
-function guiUnsoloStem(playerIdx) {
-    $('#tool__action--solo' + playerIdx).classList.remove('active');
-}
-
-function guiSoloStem(playerIdx) {
-    $('#tool__action--solo' + playerIdx).classList.add('active');
-}
-
-function toggleMuteStem(e) {
-    e.currentTarget.blur();
-    let playerId = e.currentTarget.dataset.target;
-    if(window.stemState[playerId].isMuted === true) {
-        unmuteStem(playerId);
-        return;
-    }
-    muteStem(playerId);
-}
-
-function muteStem(playerId) {
-    window.stemState[playerId].isMuted = true;
-    setVolumesAndButtonStates();
-}
-
-function unmuteStem(playerId) {
-    window.stemState[playerId].isMuted = false;
-    setVolumesAndButtonStates();
-}
-
-function guiUnmuteStem(playerIdx) {
-    $('#tool__action--mute' + playerIdx).classList.remove('active');
-}
-
-function guiMuteStem(playerIdx) {
-    $('#tool__action--mute' + playerIdx).classList.add('active');
-}
-
-function muteInternal(playerIdx) {
-    $('#player' + playerIdx).muted = true;
-    $('#track__line' + playerIdx).classList.add('track__line--audio-muted');
-}
-
-function unmuteInternal(playerIdx) {
-    $('#player' + playerIdx).muted = false;
-    $('#track__line' + playerIdx).classList.remove('track__line--audio-muted');
-}
-
-function setVolumesAndButtonStates() {
     
-    let anyTrackIsolated = false;
-    let anyTrackSoloed = false;
-    let anyTrackMuted = false;
-    for(idx in window.stemState) {
-        if(window.stemState[idx].isIsolated === true) {
-            anyTrackIsolated = true;
-        }
-        if(window.stemState[idx].isSoloed === true) {
-            anyTrackSoloed = true;
-        }
-        if(window.stemState[idx].isMuted === true) {
-            anyTrackMuted = true;
-        }
-    } 
-
-    // highest priority isolate
-    if(anyTrackIsolated === true) {
-        for(playerId in window.stemState) {
-            let idx = playerId.replace( /^\D+/g, '');
-            guiUnmuteStem(idx);
-            guiUnsoloStem(idx);
-            if(window.stemState[playerId].isIsolated === true) {
-                guiIsolateStem(idx);
-                unmuteInternal(idx);
-                continue;
-            }
-            guiUnisolateStem(idx)
-            muteInternal(idx);
-        }
-        $('.tool__action--solo').classList.remove('active');
-        $('.tool__action--mute').classList.remove('active');
-        return;
-    }
-
-    // 2nd priority solo
-    if(anyTrackSoloed === true) {
-        for(playerId in window.stemState) {
-            let idx = playerId.replace( /^\D+/g, '');
-            guiUnmuteStem(idx);
-            guiUnisolateStem(idx);
-            if(window.stemState[playerId].isSoloed === true) {
-                guiSoloStem(idx);
-                unmuteInternal(idx);
-                continue;
-            }
-            guiUnsoloStem(idx)
-            muteInternal(idx);
-        }
-        $('.tool__action--solo').classList.add('active');
-        $('.tool__action--mute').classList.remove('active');
-        return;
-    }
-
-    // 3rd priority mute
-    let highlightUnmuteAll = false;
-    for(playerId in window.stemState) {
-        let idx = playerId.replace( /^\D+/g, '');
-        guiUnsoloStem(idx);
-        guiUnisolateStem(idx);
-        if(window.stemState[playerId].isMuted === true) {
-            guiMuteStem(idx);
-            muteInternal(idx);
-            highlightUnmuteAll = true;
-            continue;
-        }
-        guiUnmuteStem(idx)
-        unmuteInternal(idx);
-        $('#player'+idx).volume = window.stemState['player'+idx].volLevel;
-    }
-    $('.tool__action--solo').classList.remove('active');
-    $('.tool__action--mute').classList[(highlightUnmuteAll === true)?'add':'remove']('active');
-
+    
+    
+    let player = $('#player0');
+    let playerCmd = 'pause';
+    let iconPathId = '#play-icon';
+    if(player.paused) {
+        playerCmd = 'play';
+        iconPathId = '#pause-icon';
+     }
+    $('.track__play use').setAttribute( 'xlink:href', iconPathId);
+    player.volume = 0.1;
+    player[playerCmd]();
 }
 
+    
+    
+   
 
 
 function setVolume(e) {
@@ -769,9 +465,7 @@ function setVolume(e) {
     e.currentTarget.blur();
     
     let playerId = e.currentTarget.dataset.target;
-    window.stemState[playerId].volLevel = e.currentTarget.value;
-    //$('#tool__action--volume'+idx).value = stem.volume;
-    $('#'+playerId).volume = window.stemState[playerId].volLevel;
+    $('#'+playerId).volume = e.currentTarget.value;
     
 }
 

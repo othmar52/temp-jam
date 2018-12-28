@@ -69,17 +69,21 @@
             <use xlink:href="#play-icon" />
         </svg>
       </button>
-      <h2 class="track__title">{track.title}</h2>
-      <div class="track__detail">
-        <span class="track__bpm">{track.bpm}</span>
-        <span class="track__unit">bpm</span>
-      </div>
+      <h2 class="track__title">split confirm</h2>
+
       <div class="track__detail track__times">
-        <span class="track__current" id="time__elapsed">08:31</span> / 
-        <span class="track__duration" id="time__total">08:31</span>
+        <span class="track__current" id="time__elapsed">--:--</span> / 
+        <span class="track__duration" id="time__total">--:--</span>
       </div>
+      <div class="tool__item tool__item--volume" style="width: 200px; height: 20px; border: 1px solid red;">
+          <input type="range" min="0" max="1" step="0.01" class="tool__action tool__action--volume" id="tool__action--volume0" value="0" data-target="player0">
+       </div>
 
     </header>
+            <audio id="player0" class="player">
+               <source type="audio/mpeg" src="full_length_mix_merged_not_normalized.wav">
+            </audio>
+
     <ul class="track__lines">
       {stemTracks}
       
@@ -88,45 +92,11 @@
 </template>
 <template id="stemTrack-markup">
       <li class="track__line line line--color-{color}" id="track__line{index}">
-        <div class="line__wave" id="line__wave{index}">
-            <audio id="player{index}" class="player">
-               <source type="audio/mpeg" src="{audiosource}">
-            </audio>
+        <div class="line__wave" id="line__wave{index}" style="height: 86px;">
             <div id="waveform__wrapper{index}" class="waveform__wrapper"></div>
-            <div class="seek__progress"></div>
-            <div class="seek__clickarea"></div>
-        </div>
-        <div class="line__audio line__audio--left"></div>
-        <div class="line__audio line__audio--right"></div>
-        <div class="line__meta" id="line_meta{index}">
-          <ul class="line__tools tool tool--line">
-            <li class="tool__item">
-                <button class="tool__action tool__action--isolate button" id="tool__action--isolate{index}" data-target="player{index}"><abbr title="Toggle isolate">I</abbr></button>
-            </li>
-            <li class="tool__item">
-                <button class="tool__action tool__action--solo button" id="tool__action--solo{index}" data-target="player{index}"><abbr title="Toggle solo">S</abbr></button>
-            </li>
-            <li class="tool__item">
-                <button class="tool__action tool__action--mute button" id="tool__action--mute{index}" data-target="player{index}"><abbr title="Toggle mute">M</abbr></button>
-            </li>
-          </ul>
-          <div class="line__description">
-            <span class="tool__item tool__item--settings">
-                <button class="tool__action tool__action--settings button" title="Toggle Settings">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
-                    <path d="M0 0h24v24H0z" fill="none"/>
-                    <path class="dotpath" d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
-                  </svg>
-                </button>
-            </span>
-            <div class="line__artist artist">
-              jammer
-              <span class="artist__name">{title}</span>
-            </div>
-            <div class="tool__item tool__item--volume">
-                <input type="range" min="0" max="1" step="0.01" class="tool__action tool__action--volume" id="tool__action--volume{index}" value="0" data-target="player{index}">
-            </div>
-          </div>
+            <div class="seek__progress" data-fromsecond="{fromSecond}" data-toSecond="{toSecond}"></div>
+            <div class="seek__clickarea" data-fromsecond="{fromSecond}" data-toSecond="{toSecond}"></div>
+
         </div>
       </li>
 </template>

@@ -233,6 +233,13 @@ class JamConf(object):
             'usedTrackTitles': [],
             'usedTrackTitleWords': []
         }
+        
+        self.usedTracktitlesFile = None
+        # TODO persist session counter n file
+        self.lastSessionCounterFile = None
+
+        self.totalDuration = 0
+
 
 class SilenceDetection(object):
     def __init__(self, activate, templateDir):
@@ -246,6 +253,7 @@ class SilenceDetection(object):
 
 def main():
     global config, jamConf
+    # TODO read locale from config
     locale.setlocale(locale.LC_TIME, "de_AT.UTF-8")
     
     logging.basicConfig(level=logging.WARNING)
@@ -378,7 +386,7 @@ def runSilenceDetection():
         wavPeaks = extractWavPeaks(
             ('%s/scripts/wavPeaks.php' % jamConf.programDir),
             jamConf.fullLengthWavMix,
-            10000
+            20000
         )
         mixPeakFile.write_text('\n'.join(wavPeaks))
     else:
@@ -388,8 +396,9 @@ def runSilenceDetection():
     # detect silence of mix and create track boundries based on result
     _doing('detecting split points')
     silences = detectSilences(jamConf.fullLengthWavMix)
-    totalDuration = detectDuration( jamConf.fullLengthWavMix )
-    suggestedTracks = silenceDetectResultToTrackBoundries(silences, totalDuration, 1.25, 6)
+    jamConf.totalDuration = detectDuration( jamConf.fullLengthWavMix )    
+    suggestedTracks = silenceDetectResultToTrackBoundries(silences, jamConf.totalDuration, 1.25, 6)
+
     
     jamConf.silenceDetection.autoDetectResultFile.write_text('\n'.join(suggestedTracks))
     
@@ -397,7 +406,8 @@ def runSilenceDetection():
     splitConfirmJsTemplate = getFileContent(str(jamConf.silenceDetection.jsTemplate))
     
     searchReplace = {
-        '{mix.peaks}': lineBreakedJoin(wavPeaks, ',')
+        '{mix.peaks}': lineBreakedJoin(wavPeaks, ','),
+        '{mix.duration}': jamConf.totalDuration
     }
     for search in searchReplace:
         splitConfirmJsTemplate = splitConfirmJsTemplate.replace(search, str(searchReplace[search]))
@@ -1052,7 +1062,7 @@ def validateConfig():
 
     if len(jamConf.jamSession.tracks) > 0:
         # we dont need any split detection if we have configured splits
-        jamConf.silenceDetection = SilenceDetection(False)
+        jamConf.silenceDetection = SilenceDetection(False, config.get('silencedetect', 'templateDir'))
     else:
         # we dont need any split detection if disabled by config
         if config.get('enable', 'silenceDetect') != '1':
@@ -1064,8 +1074,12 @@ def validateConfig():
     if config.get('enable', 'mp3splits') == '1':
         jamConf.trackMergeRequired = True
         if config.get('mp3splits', 'normalize') == '1':
-            jamConf.normalizeTrackMergeRequired = True    
+            jamConf.normalizeTrackMergeRequired = True
 
+    if config.get('tracknames', 'useRandomTracknames') == '1':
+        jamConf.usedTracktitlesFile = Path(config.get('tracknames', 'usedTrackTitlesFile').replace('{SCRIPT_PATH}', str(jamConf.programDir)) )
+        jamConf.usedTracktitlesFile.touch(exist_ok=True)
+    
     if config.get('enable', 'bpmDetect') == '1':
         jamConf.trackMergeRequired = True
     
@@ -1231,7 +1245,7 @@ def getRandomTrackName():
     
     if len(jamConf.randomTracknames['usedTrackTitleWords']) == 0:
         jamConf.randomTracknames['usedTrackTitles'] = getFileContent(
-            '%s/../.usedTracktitles' % str(jamConf.programDir)
+            str(jamConf.usedTracktitlesFile)
         ).split('\n')
         jamConf.randomTracknames['usedTrackTitleWords'] = ' '.join(jamConf.randomTracknames['usedTrackTitles']).split()
     
@@ -1285,7 +1299,10 @@ def getRandomTrackName():
 def removeOftenUsedListItems( allItems, usedItems, neededAmount):
     if len(allItems) < neededAmount:
         return allItems
-    
+
+    if len(usedItems) == 0:
+        return allItems
+
     weighted = {}
     for item in allItems:
         for usedItem in usedItems:
