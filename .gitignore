@@ -3,6 +3,7 @@ jamSplitter/webStemPlayer/node_modules/
 jamSplitter/jamSplitter.local.conf
 .usedTracktitles
 .lastSessionCounter
+*.kate-swp
 
 
 # Byte-compiled / optimized / DLL files
