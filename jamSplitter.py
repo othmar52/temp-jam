@@ -16,6 +16,7 @@
 # TODO handle split detection with html player visualization
 # TODO replace wavPeak detection (currently php script) with python
 # TODO remove webstem session dir in case it exists ()
+# TODO multiple musician names within single input filename like "john-donald.wav"
 # TODO test the whole thing on windows
 #   TODO replace symlink stuff of webstemplayer with hard copies on windows
 

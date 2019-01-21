@@ -34,6 +34,7 @@
  * separate html file just for detecting mix spit points???
  * unify classnames/id's (tool__action--mute, volClickArea, seekprogress)
  * improve intervaled sync between all audio stem tracks (example every 5 seconds)
+ *      measure out-of-sync-offset and resync single stem in case offset exceeds treshold
  * rename volProgress to volLevel as there is no progress
  * play random track on track end
  * 
