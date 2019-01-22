@@ -381,6 +381,14 @@ input[type="range"]::-ms-fill-upper {
   background-color: $orange;
 }
 
+.session__media {
+  .gallery__item {
+    display: none;
+    &:first-child {
+      display: inline-block;
+    }
+  }
+}
 // Sessionlist + session detail
 .page__wrapper.session--detail,
 .page__wrapper.session--list,{

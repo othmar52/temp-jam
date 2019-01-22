@@ -469,32 +469,13 @@ function renderTracklist() {
     //tracklistItemsMarkup = '<table class="track__list"><thead>' + $('#trackListTableHeader-markup').innerHTML + '</thead><tbody>' + tracklistItemsMarkup + '</tbody></table>';
     tracklistItemsMarkup = '<table class="track__list"><tbody>' + tracklistItemsMarkup + '</tbody></table>';
 
-    let medialistItemsMarkup = '';
-    if(window.stemSessions[window.currentSession].mediaCount > 0) {
-        let medialistItemTemplate = $('#mediaListItem-markup').innerHTML;
-        let videolistItemTemplate = $('#videoListItem-markup').innerHTML;
-        medialistItemsMarkup = 'PICS';
-        for(idx in window.stemSessions[window.currentSession].images) {
-            let image = window.stemSessions[window.currentSession].images[idx];
-            // substitute template markers for single items
-            let medialistItemMarkup = substituteImageProperties(medialistItemTemplate, image);
-            medialistItemsMarkup += medialistItemMarkup;
-        };
-        for(idx in window.stemSessions[window.currentSession].videos) {
-            let video = window.stemSessions[window.currentSession].videos[idx];
-            // substitute template markers for single items
-            let medialistItemMarkup = substituteImageProperties(videolistItemTemplate, video, idx);
-            medialistItemsMarkup += medialistItemMarkup;
-        };
-    }
-
     // substitute template markers
     //console.log(tracklistTemplate);
     tracklistTemplate = substituteSessionProperties(tracklistTemplate, window.stemSessions[window.currentSession])
         .replace(/{albumTitle}/g, window.stemSessions[window.currentSession].title)
         .replace(/{mainNav}/g, $('#main-nav-markup').innerHTML)
         .replace(/{tracklistItems}/g, tracklistItemsMarkup)
-        .replace(/{mediaItems}/g, medialistItemsMarkup);
+        .replace(/{mediaItems}/g, getMediaMarkupForSession(window.currentSession));
     realDomInjection(tracklistTemplate, '.page');
 
     // add event listeners for tracklist view
@@ -503,10 +484,39 @@ function renderTracklist() {
     });
 
     // init gallery eventlisteners
-    lightGallery($('.lightgallery'));
+    lightGallery($('#lightgallery'));
+
 }
 
 
+function getMediaMarkupForSession(sessionIndex, withLightbox = true) {
+    if(window.stemSessions[sessionIndex].mediaCount === 0) {
+        return '';
+    }
+    return $('#mediaList-markup').innerHTML
+        .replace(/{mediaCount}/g, window.stemSessions[sessionIndex].mediaCount)
+        .replace(/{mediaItems}/g, getMediaItemMarkupForSession(sessionIndex))
+        .replace(/{disabled}/g, ((withLightbox) ? '' : 'disabled'));
+}
+
+function getMediaItemMarkupForSession(sessionIndex) {
+    let medialistItemTemplate = $('#mediaListItem-markup').innerHTML;
+    let videolistItemTemplate = $('#videoListItem-markup').innerHTML;
+    medialistItemsMarkup = '';
+    for(idx in window.stemSessions[sessionIndex].images) {
+        let image = window.stemSessions[sessionIndex].images[idx];
+        // substitute template markers for single items
+        let medialistItemMarkup = substituteImageProperties(medialistItemTemplate, image, sessionIndex);
+        medialistItemsMarkup += medialistItemMarkup;
+    };
+    for(idx in window.stemSessions[sessionIndex].videos) {
+        let video = window.stemSessions[sessionIndex].videos[idx];
+        // substitute template markers for single items
+        let medialistItemMarkup = substituteImageProperties(videolistItemTemplate, video, sessionIndex, idx);
+        medialistItemsMarkup += medialistItemMarkup;
+    };
+    return medialistItemsMarkup;
+}
 
 function getStemTitlesMarkup(stemTitles) {
     const stemTitleTemplate = $('#stemTitles-markup').innerHTML;
@@ -519,10 +529,11 @@ function getStemTitlesMarkup(stemTitles) {
     return stemTitleMarkup;
 }
 
-function substituteImageProperties(markup, media, idx = 0) {
+function substituteImageProperties(markup, media, sessionIndex, idx = 0) {
     return markup
         .replace(/{idx}/g, idx)
-        .replace(/{media.filePath}/g, media.filePath);
+        .replace(/{media.filePath}/g, media.filePath)
+        .replace(/{mediaCount}/g, window.stemSessions[sessionIndex].mediaCount);
 }
 
 function substituteTrackProperties(markup, track) {
@@ -548,7 +559,8 @@ function substituteSessionProperties(markup, session) {
         .replace(/{session.day}/g, session.day)
         .replace(/{session.month}/g, session.month)
         .replace(/{session.mediaCount}/g, ((session.mediaCount>0) ? session.mediaCount : '') )
-        .replace(/{session.year}/g, session.year);
+        .replace(/{session.year}/g, session.year)
+        .replace(/{session.mediaItems}/g, getMediaMarkupForSession(session.index, false));
 }
 
 function removeAllEventListeners() {
@@ -610,7 +622,8 @@ function renderTrackView(autoplay) {
         .replace(/{trackNumber}/g, track.trackNumber)
         .replace(/{track.title}/g, track.title)
         .replace(/{track.bpm}/g, track.bpm)
-        .replace(/{stemTracks}/g, stemtracksTemplate);
+        .replace(/{stemTracks}/g, stemtracksTemplate)
+        .replace(/{mediaItems}/g, getMediaMarkupForSession(window.currentSession));
     //console.log(trackviewTemplate);
     realDomInjection(trackviewTemplate, '.page');
     window.stemSessions[window.currentSession].tracks[window.currentTrack].stems.forEach(function(stem, idx) {
@@ -727,6 +740,9 @@ function renderTrackView(autoplay) {
     if(autoplay === true) {
         $('.track__play').click();
     }
+
+    // init gallery eventlisteners
+    lightGallery($('#lightgallery'));
 
 }
 

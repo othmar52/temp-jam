@@ -417,6 +417,13 @@ input[type=range]::-ms-fill-upper {
   background-color: orange;
 }
 
+.session__media .gallery__item {
+  display: none;
+}
+.session__media .gallery__item:first-child {
+  display: inline-block;
+}
+
 .page__wrapper.session--detail,
 .page__wrapper.session--list {
   width: 100%;
