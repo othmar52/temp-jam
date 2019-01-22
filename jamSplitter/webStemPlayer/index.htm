@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>jam - multitrack player - player</title>
+  <link rel="stylesheet" href="data/stemplayer/lightgallery/css/lightgallery.min.css">
   <link rel="stylesheet" href="data/stemplayer/css/style.css">
 </head>
 <body>
@@ -45,7 +46,7 @@
           <a href="#" class="menu__link logo">
             <span class="logo__icon">
                 <!-- TODO: wtf - how to simply scale this shit with preserveAspectRatio ??? -->
-                <svg width="40" height="40" style="position: relative; top: -9px; left: -9px;" preserveAspectRatio="1" xmlns="http://www.w3.org/2000/svg" >
+                <svg width="40" height="40" style="position: relative; top: -9px; left: -9px;" xmlns="http://www.w3.org/2000/svg" >
                     <g transform="translate(-9.000000,17.000000) scale(0.032,-0.032)" stroke="none">
                         <path class="path__logo" style="stroke:none;" fill="#60d4ff" d="m898 408 l32 -5 0 -125 c0 -115 -1 -125 -17 -118 -35 14 -140 17 -176 6 -51 -17 -122 -84 -141 -133 -22 -54 -13 -109 25 -153 41 -46 76 -58 158 -53 82 4 135 35 186 107 l30 43 5 198 5 198 74 -49 c79 -52 179 -89 241 -89 46 0 59 -24 36 -68 -18 -34 -76 -87 -105 -97 -18 -5 -21 -14 -21 -69 0 -163 -92 -306 -243 -377 -119 -55 -240 -58 -370 -9 -75 28 -173 118 -215 197 -128 240 13 529 291 599 49 12 125 11 205 -3z"/>
                     </g>
@@ -246,6 +247,9 @@
             <span class="session__duration">{session.duration}</span>
             <span class="session__unit">min</span>
         </li>
+        <li class="lightgallery">
+            {mediaItems}
+        </li>
         </ul>
         {mainNav}
     </header>
@@ -298,6 +302,38 @@
           </td>
         </tr>
     </template>
+
+    <template id="mediaListItem-markup">
+        <a href="{media.filePath}" title="{media.filePath}">.</a>
+    </template>
+
+    <template id="videoListItem-markup">
+          <a href="{media.filePath}"
+          title="{media.filePath}"
+          data-iframe="true"
+          data-src="{media.filePath}"
+          data-cation="false"
+          >.</a>
+    </template>
+
+    <template id="videoListItem-markup_TODO_replace_iframe_with_this_one">
+          <span data-sub-html="video caption1" data-html="#video{idx}" >
+             .
+          </span>
+		<div style="display:none;" id="video{idx}">
+		    <video class="lg-video-object lg-html5" controls preload="none">
+		        <source src="{media.filePath}" type="video/mp4">
+		         Your browser does not support HTML5 video.
+		    </video>
+		</div>
+    </template>
+
+    <template id="mediaList-markup">
+        <div class="medialist__wrapper">
+            <h3>pics</h3>
+            {mediaItems}
+        </div>
+    </template>
     
     
 <template id="sessionList-markup">
@@ -337,6 +373,7 @@
           <th class="heading__trackcount">Tracks</th>
           <th class="heading__duration">Duration</th>
           <th class="heading__jammers">Jammers</th>
+          <th class="heading__media">P</th>
           <th class="heading__rating">Avarage Rating</th>
         </tr>
     </template>
@@ -366,6 +403,9 @@
             {session.stemTitles}
           </td>
           <td>
+              {session.mediaCount}
+          </td>
+          <td>
               <nobr><span class="rating__star">☆</span><!--
               --><span class="rating__star">☆</span><!--
               --><span class="rating__star">☆</span><!--
@@ -387,9 +427,12 @@
     <script type="text/javascript">
         window.tracklist = [];
     </script>
+
+
     <script type="text/javascript" src="data/tracklist.js"></script>
     <script type="text/javascript" src="data/stemplayer/js/d3.v3.min.js"></script>
     <script type="text/javascript" src="data/stemplayer/js/volume-meter.js"></script>
+    <script type="text/javascript" src="data/stemplayer/lightgallery/js/lightgallery.min.js"></script>
     <script type="text/javascript" src="data/stemplayer/js/stemplayer.js"></script>
 
 </body>

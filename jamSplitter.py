@@ -34,23 +34,35 @@
 # progress bar in stdout
 # http://danshiebler.com/2016-09-14-parallel-progress-bar/
 
+# time /MUSIC/_swapfile/stromwerk/00NEW/jamSplitter.py -i /run/media/engine/Stromwerk/raw/0019.1-2017.07.16-coach/raw/
+# time /MUSIC/_swapfile/stromwerk/00NEW/jamSplitter.py -i /MUSIC/_swapfile/stromwerk/INc-TEMP/RAW-10-min/
+# time for i in $( find /run/media/engine/Stromwerk/ -mindepth 2 -name raw -type d | sort ); do /MUSIC/_swapfile/stromwerk/00NEW/jamSplitter.py -i "$i"; done
+
 # benchmark 9.12.2018 (8 workers)
 #  57 sessions
-#  real    632m18,401s
-#  user    1006m44,385s
+#  real    632m18,401s  = 10,5 hours
+#  user    1006m44,385s = 16,7 hours
 #  sys     62m7,803s
-#  = ~ 17 hours
-#  = ~ 20 min/session
-
+#  = ~ 10,5 hours
+#  = ~ 11 min/session
 
 # benchmark 24.12.2018 (5 workers)
 #  59 sessions
-#  real    618m44,696s
-#  user    1068m2,257s
+#  real    618m44,696s = 10,3 hours
+#  user    1068m2,257s = 17,8 hours
 #  sys     75m28,561s
 
-#  = ~ 18 hours
-#  = ~ 20 min/session
+#  = ~ 10,3 hours
+#  = ~ 10,4 min/session
+
+# benchmark 21.01.2019 ( 5 workers )
+#  63 sessions
+#  real    628m58,125s = 10,4 hours
+#  user    1027m50,861s = 17 hours
+#  sys     54m25,763s
+#
+#  = ~ 10,4 hours
+#  = ~ 10 min/session
 
 import argparse
 import configparser
@@ -199,11 +211,27 @@ class WebStemPlayer(object):
         self.playerDir = Path('%s/data/stemplayer' % str(self.templateDir))
         self.trackConfigTemplate = Path('%s/trackConfigTemplate.js' % str(self.templateDir))
         self.stemConfigTemplate = Path('%s/stemConfigTemplate.js' % str(self.templateDir))
+        self.imageConfigTemplate = Path('%s/imageConfigTemplate.js' % str(self.templateDir))
+        self.videoConfigTemplate = Path('%s/videoConfigTemplate.js' % str(self.templateDir))
         self.tracklistConfigTemplate = Path('%s/tracklistConfigTemplate.js' % str(self.templateDir))
         self.targetDir = None
         self.baseHtmlName = ''
         self.baseHtml = None
         self.tracklistJsFile = None
+
+class ImageFile(object):
+    def __init__(self, pathObj):
+        self.path = pathObj
+        self.newFileName = ''
+        self.dateTime = None
+        self.byteSize = 0
+
+class VideoFile(object):
+    def __init__(self, pathObj):
+        self.path = pathObj
+        self.newFileName = ''
+        self.dateTime = None
+        self.byteSize = 0
         
 class JamConf(object):
     def __init__(self):
@@ -240,6 +268,9 @@ class JamConf(object):
         self.lastSessionCounterFile = None
 
         self.totalDuration = 0
+
+        self.images = [];
+        self.videos = [];
 
 
 class SilenceDetection(object):
@@ -329,12 +360,6 @@ def main():
                 processedTrack = executor.submit(processTrack, (track))
                 processedTrack.add_done_callback(trackProcessorCallback)
                 usedTrackTitles.append(track.trackTitle)
-
-        
-        # time /MUSIC/_swapfile/stromwerk/00NEW/jamSplitter.py -i /run/media/engine/Stromwerk/raw/0019.1-2017.07.16-coach/raw/
-        # time /MUSIC/_swapfile/stromwerk/00NEW/jamSplitter.py -i /MUSIC/_swapfile/stromwerk/INc-TEMP/RAW-10-min/
-        # time for i in $( find /run/media/engine/Stromwerk/ -mindepth 2 -name raw -type d | sort ); do /MUSIC/_swapfile/stromwerk/00NEW/jamSplitter.py -i "$i"; done
-
 
 
     if config.get('enable', 'webstemplayer') == '1':
@@ -731,8 +756,30 @@ def processTrack(track):
 def finishWebStemTrack(track):
     global jamConf
     
-    stemsJs = []
     
+    imagesJs = []
+    for image in jamConf.images:
+        imageJsTemplate = getFileContent(str(jamConf.wsp.imageConfigTemplate))
+        searchReplace = {
+            '{image.path}': str(image.newFileName),
+            '{image.byteSize}': str(image.byteSize)
+        }
+        for search in searchReplace:
+            imageJsTemplate = imageJsTemplate.replace(search, str(searchReplace[search]))
+        imagesJs.append(imageJsTemplate)
+
+    videosJs = []
+    for video in jamConf.videos:
+        videoJsTemplate = getFileContent(str(jamConf.wsp.videoConfigTemplate))
+        searchReplace = {
+            '{video.path}': str(video.newFileName),
+            '{video.byteSize}': str(video.byteSize)
+        }
+        for search in searchReplace:
+            videoJsTemplate = videoJsTemplate.replace(search, str(searchReplace[search]))
+        videosJs.append(videoJsTemplate)
+
+    stemsJs = []
     # we need a very special weighted sorting...
     for stem in sortStems(track.stems):
         stemJsTemplate = getFileContent(str(jamConf.wsp.stemConfigTemplate))
@@ -768,7 +815,9 @@ def finishWebStemTrack(track):
         '{track.splitStart}': track.startSecond,
         '{track.splitEnd}': track.endSecond,
         '{track.dbLevelsInputFiles}': track.dbLevelsInputFiles,
-        '{stems}': ','.join(stemsJs)
+        '{stems}': ','.join(stemsJs),
+        '{images}': ','.join(imagesJs),
+        '{videos}': ','.join(videosJs)
     }
     for search in searchReplace:
         trackJsTemplate = trackJsTemplate.replace(search, str(searchReplace[search]))
@@ -878,6 +927,26 @@ def finishWebStemSession():
         trackJs = trackJs + getFileContent(str(sessionlistJsFile))
     
     sessionlistJsFile.write_text(trackJs)
+
+
+    # copy images
+    imagesTargetDir = Path('%s/data/%s/data/images' % (
+        jamConf.wsp.targetDir,
+        jamConf.jamSession.dirName
+    ))
+    for image in jamConf.images:
+        imagesTargetDir.mkdir(parents=True, exist_ok=True)
+        copyfile(str(image.path), ('%s/../../%s'% (str(imagesTargetDir), image.newFileName)))
+
+
+    # copy videos
+    videosTargetDir = Path('%s/data/%s/data/videos' % (
+        jamConf.wsp.targetDir,
+        jamConf.jamSession.dirName
+    ))
+    for video in jamConf.videos:
+        videosTargetDir.mkdir(parents=True, exist_ok=True)
+        copyfile(str(video.path), ('%s/../../%s'% (str(videosTargetDir), video.newFileName)))
 
 
 def sortStems(stemsList):
@@ -1162,6 +1231,10 @@ def validateConfig():
 
         jamConf.wsp = wsp
 
+    if config.get('webstemplayer', 'includeMedia') == '1':
+        jamConf.images = searchImageFiles()
+        jamConf.videos = searchVideoFiles()
+
     return True
 
 def getUniqueName(itemName, itemList):
@@ -1260,12 +1333,59 @@ def finishMp3Mix():
 
 
 def searchAudioSourceFiles():
-    global config, jamConf
-    pattern = '.%s' % ( config.get('general', 'inputFileExt') )
+    return recusiveFindByExtList(
+        jamConf.sourceDir,
+        config.get('general', 'inputFileExt')
+    )
+
+
+def searchImageFiles():
+    images = recusiveFindByExtList(
+        jamConf.sourceDir,
+        config.get('media', 'imagesExt')
+    )
+    result = []
+    for item in images:
+        image = ImageFile(item)
+        image.dateTime = detectTimestampFromString(item.stem)
+        image.byteSize = item.stat().st_size
+        # keep original relative path in filename
+        image.newFileName = 'data/images/' + str(item)[(len(str(jamConf.sourceDir))+1):].replace('/', '-')
+        result.append(image)
+
+    return result
+
+
+def searchVideoFiles():
+    videos = recusiveFindByExtList(
+        jamConf.sourceDir,
+        config.get('media', 'videosExt')
+    )
+    result = []
+    for item in videos:
+        video = VideoFile(item)
+        video.dateTime = detectTimestampFromString(item.stem)
+        video.byteSize = item.stat().st_size
+        # keep original relative path in filename
+        video.newFileName = 'data/videos/' + str(item)[(len(str(jamConf.sourceDir))+1):].replace('/', '-')
+        result.append(video)
+
+    return result
+
+''' it seems to be common to have filenames like YYYYMMDD_HHMMSS.jpg '''
+def detectTimestampFromString(inputString):
+    dateTime = None
+    match = re.match('.*([0-9]{8}\_[0-9]{6}).*', inputString)
+    if match:
+        dateTime = datetime.datetime.strptime(match.group(1), '%Y%m%d_%H%M%S')
+
+    return dateTime
+
+def recusiveFindByExtList(searchPath, extListString):
+    extList = ['.' + x.strip() for x in extListString.lower().split(',')]
     foundFiles = []
-    #return foundFiles
-    for foundFile in jamConf.sourceDir.rglob("*.*"):
-        if foundFile.suffix.lower() == pattern.lower():
+    for foundFile in searchPath.rglob('*.*'):
+        if foundFile.suffix.lower() in extList:
             foundFiles += [ foundFile ]
 
     return foundFiles

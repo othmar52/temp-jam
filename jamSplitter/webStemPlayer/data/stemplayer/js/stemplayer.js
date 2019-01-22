@@ -17,6 +17,12 @@
  *      per session
  *      per alle sessions
  * 
+ * dependency TRYOUT
+ *    https://github.com/sachinchoolur/lightgallery.js
+ * or
+ *    https://mcstudios.github.io/glightbox/#options
+ * 
+ * 
  * welcome screen for single session html opening (not the logo screen thingy)
  * invisible seek click area to include the horizontal stem gaps for seeking
  * on resize (decrease viewport width) the stemplayer position is shit
@@ -234,7 +240,21 @@ function prefixAudioPaths(sessionIndex, trackIndex, pathPrefix) {
     substituteAudioPathsWithHttpUrls(sessionIndex, trackIndex);
 }
 
-
+function prefixMediaPaths(sessionIndex, pathPrefix) {
+    if(typeof window.stemSessions[sessionIndex].mediaPathCorrectionDone !== 'undefined') {
+        return;
+    }
+    let images = stemSessions[sessionIndex].images;
+    images.forEach(function(image, imageIndex) {
+        window.stemSessions[sessionIndex].images[imageIndex].filePath = pathPrefix + image.filePath;
+        window.stemSessions[sessionIndex].mediaPathCorrectionDone = true;
+    });
+    let videos = stemSessions[sessionIndex].videos;
+    videos.forEach(function(videos, videosIndex) {
+        window.stemSessions[sessionIndex].videos[videosIndex].filePath = pathPrefix + videos.filePath;
+        window.stemSessions[sessionIndex].mediaPathCorrectionDone = true;
+    });
+}
 
 /**
  * TODO: remove items when there is no audio avalilable
@@ -270,6 +290,9 @@ async function checkConfigPaths() {
             .then(function(){
                 //console.log("SUCCESS in Promise checkConfigPaths()", sessIdx, trackIdx);
                 prefixAudioPaths(sessIdx, trackIdx, trackDataPath);
+                if(window.hostLevel === 'sessionlist') {
+                    prefixMediaPaths(sessIdx, 'data/' + window.tracklist[i].sessionDir + '/');
+                }
                 return;
             })
             .catch(function(){
@@ -332,6 +355,9 @@ function calculateDurations() {
     for(let sessionIdx in window.stemSessions) {
         let sessionDuration = 0;
         let stemTitlesSession = {};
+
+        window.stemSessions[sessionIdx].mediaCount = window.stemSessions[sessionIdx].images.length
+            + window.stemSessions[sessionIdx].videos.length;
         for(let trackIdx in window.stemSessions[sessionIdx].tracks) {
             sessionDuration += window.stemSessions[sessionIdx].tracks[trackIdx].duration;
             window.allSessions.trackCount++;
@@ -442,19 +468,42 @@ function renderTracklist() {
     // so we have to place wrapping table markup here and not withen the <template> container ...
     //tracklistItemsMarkup = '<table class="track__list"><thead>' + $('#trackListTableHeader-markup').innerHTML + '</thead><tbody>' + tracklistItemsMarkup + '</tbody></table>';
     tracklistItemsMarkup = '<table class="track__list"><tbody>' + tracklistItemsMarkup + '</tbody></table>';
-    
+
+    let medialistItemsMarkup = '';
+    if(window.stemSessions[window.currentSession].mediaCount > 0) {
+        let medialistItemTemplate = $('#mediaListItem-markup').innerHTML;
+        let videolistItemTemplate = $('#videoListItem-markup').innerHTML;
+        medialistItemsMarkup = 'PICS';
+        for(idx in window.stemSessions[window.currentSession].images) {
+            let image = window.stemSessions[window.currentSession].images[idx];
+            // substitute template markers for single items
+            let medialistItemMarkup = substituteImageProperties(medialistItemTemplate, image);
+            medialistItemsMarkup += medialistItemMarkup;
+        };
+        for(idx in window.stemSessions[window.currentSession].videos) {
+            let video = window.stemSessions[window.currentSession].videos[idx];
+            // substitute template markers for single items
+            let medialistItemMarkup = substituteImageProperties(videolistItemTemplate, video, idx);
+            medialistItemsMarkup += medialistItemMarkup;
+        };
+    }
+
     // substitute template markers
     //console.log(tracklistTemplate);
     tracklistTemplate = substituteSessionProperties(tracklistTemplate, window.stemSessions[window.currentSession])
         .replace(/{albumTitle}/g, window.stemSessions[window.currentSession].title)
         .replace(/{mainNav}/g, $('#main-nav-markup').innerHTML)
-        .replace(/{tracklistItems}/g, tracklistItemsMarkup);
+        .replace(/{tracklistItems}/g, tracklistItemsMarkup)
+        .replace(/{mediaItems}/g, medialistItemsMarkup);
     realDomInjection(tracklistTemplate, '.page');
 
     // add event listeners for tracklist view
     Array.from($$('.navigate')).forEach(function(element) {
       element.addEventListener('click', navigate);
     });
+
+    // init gallery eventlisteners
+    lightGallery($('.lightgallery'));
 }
 
 
@@ -468,6 +517,12 @@ function getStemTitlesMarkup(stemTitles) {
             .replace(/{stem.color}/g, stemTitles[stemTitle]);
     }
     return stemTitleMarkup;
+}
+
+function substituteImageProperties(markup, media, idx = 0) {
+    return markup
+        .replace(/{idx}/g, idx)
+        .replace(/{media.filePath}/g, media.filePath);
 }
 
 function substituteTrackProperties(markup, track) {
@@ -492,6 +547,7 @@ function substituteSessionProperties(markup, session) {
         .replace(/{session.date}/g, session.date)
         .replace(/{session.day}/g, session.day)
         .replace(/{session.month}/g, session.month)
+        .replace(/{session.mediaCount}/g, ((session.mediaCount>0) ? session.mediaCount : '') )
         .replace(/{session.year}/g, session.year);
 }
 
@@ -602,7 +658,13 @@ function renderTrackView(autoplay) {
         if(player.currentTime % window.resyncAfter < 0.1 && player.currentTime % window.resyncAfter  > 0) {
             resyncStems();
         }
-        $('#time__elapsed').innerHTML = formatTime(player.currentTime);
+
+        // TODO: implement toggle between tracktime and session time
+        let absoluteTime = false;
+        let timeToRender = (absoluteTime === false)
+            ? player.currentTime
+            : player.currentTime + window.stemSessions[window.currentSession].tracks[window.currentTrack].splitStart;
+        $('#time__elapsed').innerHTML = formatTime(timeToRender);
         Array.from($$('.seek__progress')).forEach(function(element) {
             element.style.width = (player.currentTime +.25)/player.duration*100+'%';
         });

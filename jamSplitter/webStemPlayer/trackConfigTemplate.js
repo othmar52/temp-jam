@@ -7,7 +7,13 @@ window.stemSessions['session{session.paddedCounter}'] = window.stemSessions['ses
     month: '{session.month}',
     year: '{session.year}',
     title: 'Jam session #{session.counter}',
-    tracks: {}
+    tracks: {},
+    images: [
+{images}
+    ],
+    videos: [
+{videos}
+    ]
 };
 window.stemSessions['session{session.paddedCounter}'].tracks['{track.letter}'] = window.stemSessions['session{session.paddedCounter}'].tracks['{track.letter}'] || {
     title: '{track.title}',
