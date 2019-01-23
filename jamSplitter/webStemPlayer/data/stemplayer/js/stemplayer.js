@@ -531,7 +531,7 @@ function getStemTitlesMarkup(stemTitles) {
 
 function substituteImageProperties(markup, media, sessionIndex, idx = 0) {
     return markup
-        .replace(/{idx}/g, idx)
+        .replace(/{idx}/g, sessionIndex.replace(/[\W_]+/g,"_") + idx)
         .replace(/{media.filePath}/g, media.filePath)
         .replace(/{mediaCount}/g, window.stemSessions[sessionIndex].mediaCount);
 }
@@ -746,6 +746,96 @@ function renderTrackView(autoplay) {
 
 }
 
+
+
+
+
+function renderMediaView(autoplay) {
+    $('body').classList.remove('sessionlistView');
+    $('body').classList.remove('tracklistView');
+    $('body').classList.add('trackView');
+    removeAllEventListeners();
+    $('.page').innerHTML = '';
+    let mediaviewTemplate = $('#medialist-markup').innerHTML;
+    
+    document.title = 'Media';
+    mediaItemsMarkup = '';
+    for(sessionIdx in window.stemSessions) {
+        mediaItemsMarkup = getMediaItemMarkupForSession(sessionIdx) + mediaItemsMarkup;
+    }
+    
+    mediaviewTemplate = mediaviewTemplate
+        .replace(/{mainNav}/g, $('#main-nav-markup').innerHTML)
+        .replace(/{media.imagesCount}/g, 'TODO')
+        .replace(/{media.videosCount}/g, 'TODO')
+        .replace(/{medialistItems}/g, mediaItemsMarkup);
+
+        //.replace(/{mediaItems}/g, getMediaMarkupForSession(window.currentSession));
+        
+    
+    realDomInjection(mediaviewTemplate, '.page');
+
+    // add event listeners for tracklist
+    Array.from($$('.navigate')).forEach(function(element) {
+      element.addEventListener('click', navigate);
+    });
+    // init gallery eventlisteners
+    lightGallery($('#lightgallery'));
+    return;
+
+    // create all audio elements
+    let stemtracksTemplate = '';
+    window.stemSessions[window.currentSession].tracks[window.currentTrack].stems.forEach(function(stem, idx) {
+        window.stemState['player'+idx] = {
+            isMuted: false,
+            isSoloed: false,
+            isIsolated: false,
+            volLevel: stem.volume
+        };
+
+        // substitute template markers
+        let stemWrapperMarkup = stemWrapperTemplate;
+        stemWrapperMarkup = stemWrapperMarkup
+            .replace(/{index}/g, idx)
+            .replace(/{audiosource}/g, stem.filePath)
+            .replace(/{color}/g, stem.color)
+            .replace(/{title}/g, stem.title);
+
+        stemtracksTemplate += stemWrapperMarkup;
+        
+    });
+    let trackNavItemTemplate = $('#trackBulletNavigation-markup').innerHTML;
+    let trackNavigationMarkup = ''
+    for(let trackIdx in window.window.stemSessions[window.currentSession].tracks) {
+        let trackNavItemMarkup = trackNavItemTemplate;
+        let track = window.stemSessions[window.currentSession].tracks[trackIdx];
+        trackNavItemMarkup = substituteTrackProperties(trackNavItemMarkup, track)
+            .replace(/{session.index}/g, window.currentSession)
+            .replace(/{session.title}/g, window.stemSessions[window.currentSession].title)
+            .replace(/{active}/g, ((window.currentTrack === trackIdx ) ? 'active': ''));
+        trackNavigationMarkup += trackNavItemMarkup;
+    }
+    let track = window.stemSessions[window.currentSession].tracks[window.currentTrack];
+    document.title = track.trackNumber + '-' + track.title + ', ' + window.stemSessions[window.currentSession].title;
+    trackviewTemplate = substituteSessionProperties(trackviewTemplate, window.stemSessions[window.currentSession])
+        .replace(/{mainNav}/g, $('#main-nav-markup').innerHTML)
+
+        
+        .replace(/{trackNavigation}/g, trackNavigationMarkup)
+        .replace(/{trackNumber}/g, track.trackNumber)
+        .replace(/{track.title}/g, track.title)
+        .replace(/{track.bpm}/g, track.bpm)
+        .replace(/{stemTracks}/g, stemtracksTemplate)
+        .replace(/{mediaItems}/g, getMediaMarkupForSession(window.currentSession));
+    //console.log(trackviewTemplate);
+    realDomInjection(trackviewTemplate, '.page');
+    // init gallery eventlisteners
+    lightGallery($('#lightgallery'));
+
+}
+
+
+
 function getNextSiblings(elem, filter) {
     var sibs = [];
     while (elem = elem.nextSibling) {
@@ -779,6 +869,12 @@ function navigate(e) {
         window.currentSession = e.currentTarget.dataset.targetsession;
         window.currentTrack = e.currentTarget.dataset.targettrack;
         renderTrackView(true);
+        return;
+    }
+    if(e.currentTarget.dataset.targettype === 'medialist') {
+        window.currentSession = null;
+        window.currentTrack = null;
+        renderMediaView();
         return;
     }
 }
