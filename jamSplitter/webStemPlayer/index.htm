@@ -42,6 +42,9 @@
         <li class="menu__item">
           <a href="#" class="menu__link">Statistics</a>
         </li>
+        <li class="menu__item">
+          <a href="#" class="menu__link navigate" data-targettype="medialist">Pics</a>
+        </li>
         <li class="menu__item menu__item--logo">
           <a href="#" class="menu__link logo">
             <span class="logo__icon">
@@ -57,6 +60,32 @@
         </li>
       </ul>
     </nav>
+</template>
+<template id="medialist-markup">
+    <header class="page__header">
+        <h1 class="page__title">
+        <span class="view"><span class="view__highlight">Me</span>dia</span>
+        <span class="page__additional">Stromwerk</span>
+        </h1>
+        <ul class="page__info session__list">
+        <li class="session__item">
+            <span class="session__tracks">{media.imagesCount}</span> Images
+        </li>
+        <li class="session__item">
+            <span class="session__tracks">{media.videosCount}</span> Videos
+        </li>
+        </ul>
+        {mainNav}
+    </header>
+ <main class="page__wrapper session session--detail">
+    <a href="#" data-targettype="sessionlist" class="navigate">&lt; All sessions</a>
+    <div class="medialist__wrapper">
+        <h3>TODO: replace those shitty icons with thumbnails...</h3>
+        <div id="lightgallery">
+            {medialistItems}
+        </div>
+    </div>
+  </main>
 </template>
 <template id="track-markup">
   <header class="page__header">
@@ -85,6 +114,7 @@
       <li class="session__detail">
         <span class="session__duration">{session.duration}</span>
         <span class="session__unit">min</span>
+        {mediaItems}
       </li>
     </ul>
     {mainNav}
@@ -246,8 +276,6 @@
         <li class="session__detail">
             <span class="session__duration">{session.duration}</span>
             <span class="session__unit">min</span>
-        </li>
-        <li class="lightgallery">
             {mediaItems}
         </li>
         </ul>
@@ -304,38 +332,52 @@
     </template>
 
     <template id="mediaListItem-markup">
-        <a href="{media.filePath}" title="{media.filePath}">.</a>
+        <span class="gallery__item" data-src="{media.filePath}" title="{media.filePath}">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20">
+              <defs>
+                <clipPath id="a">
+                  <path d="M13 11a3 3 0 1 0-3 3 3 3 0 0 0 3-3zm-3 5a5 5 0 1 1 5-5 5 5 0 0 1-5 5zM6.42 2.56l-.67.64a2 2 0 0 1-1.38.56H2a1.89 1.89 0 0 0-2 1.75v10.54a1.89 1.89 0 0 0 2 1.76h16a1.89 1.89 0 0 0 2-1.76V5.51a1.89 1.89 0 0 0-2-1.76h-2.37a2 2 0 0 1-1.38-.56l-.67-.64A2 2 0 0 0 12.2 2H7.8a2 2 0 0 0-1.38.56z" clip-rule="evenodd"/>
+                </clipPath>
+              </defs>
+              <path fill-rule="evenodd" d="M13 11a3 3 0 1 0-3 3 3 3 0 0 0 3-3zm-3 5a5 5 0 1 1 5-5 5 5 0 0 1-5 5zM6.42 2.56l-.67.64a2 2 0 0 1-1.38.56H2a1.89 1.89 0 0 0-2 1.75v10.54a1.89 1.89 0 0 0 2 1.76h16a1.89 1.89 0 0 0 2-1.76V5.51a1.89 1.89 0 0 0-2-1.76h-2.37a2 2 0 0 1-1.38-.56l-.67-.64A2 2 0 0 0 12.2 2H7.8a2 2 0 0 0-1.38.56z"/>
+              <g clip-path="url(#a)">
+                <path fill="#0d1332" d="M0 0h20v20H0z"/>
+              </g>
+            </svg>
+            {mediaCount}
+        </a>
     </template>
 
     <template id="videoListItem-markup">
-          <a href="{media.filePath}"
-          title="{media.filePath}"
-          data-iframe="true"
-          data-src="{media.filePath}"
-          data-cation="false"
-          >.</a>
-    </template>
-
-    <template id="videoListItem-markup_TODO_replace_iframe_with_this_one">
-          <span data-sub-html="video caption1" data-html="#video{idx}" >
-             .
+          <span class="gallery__item" data-sub-html="video caption1" data-html="#video{idx}" >
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20">
+              <defs>
+                <clipPath id="a">
+                  <path d="M13 11a3 3 0 1 0-3 3 3 3 0 0 0 3-3zm-3 5a5 5 0 1 1 5-5 5 5 0 0 1-5 5zM6.42 2.56l-.67.64a2 2 0 0 1-1.38.56H2a1.89 1.89 0 0 0-2 1.75v10.54a1.89 1.89 0 0 0 2 1.76h16a1.89 1.89 0 0 0 2-1.76V5.51a1.89 1.89 0 0 0-2-1.76h-2.37a2 2 0 0 1-1.38-.56l-.67-.64A2 2 0 0 0 12.2 2H7.8a2 2 0 0 0-1.38.56z" clip-rule="evenodd"/>
+                </clipPath>
+              </defs>
+              <path fill-rule="evenodd" d="M13 11a3 3 0 1 0-3 3 3 3 0 0 0 3-3zm-3 5a5 5 0 1 1 5-5 5 5 0 0 1-5 5zM6.42 2.56l-.67.64a2 2 0 0 1-1.38.56H2a1.89 1.89 0 0 0-2 1.75v10.54a1.89 1.89 0 0 0 2 1.76h16a1.89 1.89 0 0 0 2-1.76V5.51a1.89 1.89 0 0 0-2-1.76h-2.37a2 2 0 0 1-1.38-.56l-.67-.64A2 2 0 0 0 12.2 2H7.8a2 2 0 0 0-1.38.56z"/>
+              <g clip-path="url(#a)">
+                <path fill="#0d1332" d="M0 0h20v20H0z"/>
+              </g>
+            </svg>
+            {mediaCount}
+            <div style="display:none;" id="video{idx}">
+                <video class="lg-video-object lg-html5" controls preload="none">
+                    <source src="{media.filePath}" type="video/mp4">
+                     Your browser does not support HTML5 video.
+                </video>
+            </div>
           </span>
-		<div style="display:none;" id="video{idx}">
-		    <video class="lg-video-object lg-html5" controls preload="none">
-		        <source src="{media.filePath}" type="video/mp4">
-		         Your browser does not support HTML5 video.
-		    </video>
-		</div>
+
     </template>
 
     <template id="mediaList-markup">
-        <div class="medialist__wrapper">
-            <h3>pics</h3>
+        <span class="session__media" id="lightgallery{disabled}" data-selector=".gallery_item">
             {mediaItems}
-        </div>
+        </span>
     </template>
-    
-    
+
 <template id="sessionList-markup">
     <header class="page__header">
         <h1 class="page__title">
@@ -363,9 +405,6 @@
         </div>
       </main>
     </template>
-    
-
-    
     <template id="sessionListTableHeader-markup">
         <tr>
           <th class="heading_date">Date</th>
@@ -373,7 +412,7 @@
           <th class="heading__trackcount">Tracks</th>
           <th class="heading__duration">Duration</th>
           <th class="heading__jammers">Jammers</th>
-          <th class="heading__media">P</th>
+          <th class="heading__media"></th>
           <th class="heading__rating">Avarage Rating</th>
         </tr>
     </template>
@@ -403,7 +442,7 @@
             {session.stemTitles}
           </td>
           <td>
-              {session.mediaCount}
+              {session.mediaItems}
           </td>
           <td>
               <nobr><span class="rating__star">☆</span><!--
@@ -417,8 +456,6 @@
               </nobr>
           </td>
         </tr>
-        
-        
     </template>
     <template id="stemTitles-markup">
       <nobr><span class="stem__title stem__title--{stem.color}"><span class="dot"></span> {stem.title}</span></nobr>
@@ -432,7 +469,10 @@
     <script type="text/javascript" src="data/tracklist.js"></script>
     <script type="text/javascript" src="data/stemplayer/js/d3.v3.min.js"></script>
     <script type="text/javascript" src="data/stemplayer/js/volume-meter.js"></script>
-    <script type="text/javascript" src="data/stemplayer/lightgallery/js/lightgallery.min.js"></script>
+    <script type="text/javascript" src="data/stemplayer/lightgallery/js/lightgallery.js"></script>
+    <script type="text/javascript" src="data/stemplayer/lg-plugins/lg-fullscreen.js"></script>
+    <script type="text/javascript" src="data/stemplayer/lg-plugins/lg-zoom.js"></script>
+    <script type="text/javascript" src="data/stemplayer/lg-plugins/lg-video.js"></script>
     <script type="text/javascript" src="data/stemplayer/js/stemplayer.js"></script>
 
 </body>
