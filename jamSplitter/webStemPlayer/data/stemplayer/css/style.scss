@@ -532,7 +532,7 @@ input[type="range"]::-ms-fill-upper {
 
 //Track Detail
 .track--detail {
-  flex-grow: 1;
+  width: calc(100% - 300px - 2em);
   display: flex;
   flex-direction: column;
   height: calc(100vh - 100px - 8vw);
@@ -557,6 +557,8 @@ input[type="range"]::-ms-fill-upper {
   height: 5em;
   background: none;
   border: none;
+  flex-shrink: 0;
+
 
   display: inline-block;
   background: #0d1332;
