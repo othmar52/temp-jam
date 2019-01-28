@@ -156,7 +156,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             $('.page').innerHTML = '';
             window[renderFunc]();
         },
-        2000
+        200
     );
 
     
@@ -648,6 +648,7 @@ function renderTrackView(autoplay) {
         let stemWrapperMarkup = stemWrapperTemplate;
         stemWrapperMarkup = stemWrapperMarkup
             .replace(/{index}/g, idx)
+            .replace(/{indexDisplay}/g, idx+1)
             .replace(/{audiosource}/g, stem.filePath)
             .replace(/{color}/g, stem.color)
             .replace(/{title}/g, stem.title);
@@ -764,6 +765,14 @@ function renderTrackView(autoplay) {
             },
             false
         );
+    });
+
+    Array.from($$('.tool__action--boost')).forEach(function(element) {
+      element.addEventListener('mousedown', boostStem);
+    });
+
+    Array.from($$('.tool__action--boost')).forEach(function(element) {
+      element.addEventListener('mouseup', unBoostStems);
     });
 
     Array.from($$('.tool__action--isolate')).forEach(function(element) {
@@ -1184,6 +1193,11 @@ function setVolumesAndButtonStates() {
         if(window.stemState[idx].isMuted === true) {
             anyTrackMuted = true;
         }
+        // reset possible boost gui modifications
+        let numericIdx = idx.replace( /^\D+/g, '');
+        $('#tool__action--volume' + numericIdx).style.opacity = 1;
+        $('#waveform__wrapper' + numericIdx + ' canvas').style.opacity = 1;
+        $('#tool__action--volume' + numericIdx).value = window.stemState[idx].volLevel;
     } 
 
     // highest priority isolate
@@ -1245,7 +1259,27 @@ function setVolumesAndButtonStates() {
 
 }
 
+function boostStem(e) {
+    for(playerId in window.stemState) {
+        let idx = playerId.replace( /^\D+/g, '');
+        let targetVolume = 0.2;
+        let targetOpacity = 0.2;
+        if(playerId === e.currentTarget.dataset.target) {
+            targetVolume = 1;
+            targetOpacity = 1;
+            guiUnmuteStem(idx)
+            unmuteInternal(idx);
+        }
+        $('#' + playerId).volume = targetVolume;
+        $('#tool__action--volume' + idx).value = targetVolume;
+        $('#tool__action--volume' + idx).style.opacity = targetOpacity;
+        $('#waveform__wrapper' + idx + ' canvas').style.opacity = targetOpacity;
+    }
+}
 
+function unBoostStems() {
+    setVolumesAndButtonStates();
+}
 
 function setVolume(e) {
     

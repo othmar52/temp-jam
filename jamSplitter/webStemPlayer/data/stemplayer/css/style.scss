@@ -587,7 +587,6 @@ input[type="range"]::-ms-fill-upper {
   flex-grow: 1;
   overflow-x: hidden;
   overflow-y: auto;
-  counter-reset: lines;
 }
 
 
@@ -608,13 +607,16 @@ input[type="range"]::-ms-fill-upper {
 .line {
   display: flex;
   margin-bottom: 10px;
-  counter-increment: lines;
-  &:before {
-    content: '#' counter(lines);
+
+  .line__index {
     padding: 0.7em;
     display: flex;
     align-items: center;
     font-weight: bold;
+  }
+
+  .line__index:hover {
+    cursor: pointer;
   }
   .line__wave {
     background-color: #0b1130;
@@ -675,7 +677,7 @@ input[type="range"]::-ms-fill-upper {
 }
 
 .line--color-red {
-  &:before {
+  .line__index {
     background-color: $red;
   }
   .artist__name {
@@ -683,7 +685,7 @@ input[type="range"]::-ms-fill-upper {
   }
 }
 .line--color-pink {
-  &:before {
+  .line__index {
     background-color: $pink;
   }
   .artist__name {
@@ -691,7 +693,7 @@ input[type="range"]::-ms-fill-upper {
   }
 }
 .line--color-cyan {
-  &:before {
+  .line__index {
     background-color: $cyan;
   }
   .artist__name {
@@ -699,7 +701,7 @@ input[type="range"]::-ms-fill-upper {
   }
 }
 .line--color-orange {
-  &:before {
+  .line__index {
     background-color: $orange;
   }
   .artist__name {
@@ -707,7 +709,7 @@ input[type="range"]::-ms-fill-upper {
   }
 }
 .line--color-blue {
-  &:before {
+  .line__index {
     background-color: $blue;
   }
   .artist__name {
@@ -715,7 +717,7 @@ input[type="range"]::-ms-fill-upper {
   }
 }
 .line--color-green {
-  &:before {
+  .line__index {
     background-color: $green;
   }
   .artist__name {
@@ -723,7 +725,7 @@ input[type="range"]::-ms-fill-upper {
   }
 }
 .line--color-yellow {
-  &:before {
+  .line__index {
     background-color: $yellow;
   }
   .artist__name {
@@ -731,7 +733,7 @@ input[type="range"]::-ms-fill-upper {
   }
 }
 .line--color-violet {
-  &:before {
+  .line__index {
     background-color: $violet;
   }
   .artist__name {

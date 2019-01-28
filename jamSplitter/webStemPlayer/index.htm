@@ -188,6 +188,9 @@
 </template>
 <template id="stemTrack-markup">
       <li class="track__line line line--color-{color}" id="track__line{index}">
+        <div class="line__index tool__action--boost" id="line__index{index}" data-target="player{index}" title="click and hold to boost stem">
+            #{indexDisplay}
+        </div>
         <div class="line__wave" id="line__wave{index}">
             <audio id="player{index}" class="player">
                <source type="audio/mpeg" src="{audiosource}">

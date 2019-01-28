@@ -613,7 +613,6 @@ input[type=range]::-ms-fill-upper {
   flex-grow: 1;
   overflow-x: hidden;
   overflow-y: auto;
-  counter-reset: lines;
 }
 
 .track__tools {
@@ -632,14 +631,15 @@ input[type=range]::-ms-fill-upper {
 .line {
   display: flex;
   margin-bottom: 10px;
-  counter-increment: lines;
 }
-.line:before {
-  content: "#" counter(lines);
+.line .line__index {
   padding: 0.7em;
   display: flex;
   align-items: center;
   font-weight: bold;
+}
+.line .line__index:hover {
+  cursor: pointer;
 }
 .line .line__wave {
   background-color: #0b1130;
@@ -699,56 +699,56 @@ input[type=range]::-ms-fill-upper {
   transition: opacity 0.25s ease-in-out;
 }
 
-.line--color-red:before {
+.line--color-red .line__index {
   background-color: #d64343;
 }
 .line--color-red .artist__name {
   color: #d64343;
 }
 
-.line--color-pink:before {
+.line--color-pink .line__index {
   background-color: #d02185;
 }
 .line--color-pink .artist__name {
   color: #d02185;
 }
 
-.line--color-cyan:before {
+.line--color-cyan .line__index {
   background-color: #00cbcb;
 }
 .line--color-cyan .artist__name {
   color: #00cbcb;
 }
 
-.line--color-orange:before {
+.line--color-orange .line__index {
   background-color: orange;
 }
 .line--color-orange .artist__name {
   color: orange;
 }
 
-.line--color-blue:before {
+.line--color-blue .line__index {
   background-color: #4773d0;
 }
 .line--color-blue .artist__name {
   color: #4773d0;
 }
 
-.line--color-green:before {
+.line--color-green .line__index {
   background-color: green;
 }
 .line--color-green .artist__name {
   color: green;
 }
 
-.line--color-yellow:before {
+.line--color-yellow .line__index {
   background-color: #c6d23d;
 }
 .line--color-yellow .artist__name {
   color: #c6d23d;
 }
 
-.line--color-violet:before {
+.line--color-violet .line__index {
   background-color: violet;
 }
 .line--color-violet .artist__name {
