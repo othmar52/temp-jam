@@ -70,7 +70,9 @@
  * 
  * https://github.com/GoogleChromeLabs/simplehttp2server
  * 
- * implement bpm tapper. @see http://www.beatsperminuteonline.com/
+ * implement bpm tapper.
+ *   @see http://www.beatsperminuteonline.com/
+ *   or https://github.com/Sibicle/onetwoeight
  * 
  */
 let waveformSettings = {
@@ -117,6 +119,8 @@ window.currentView = 'sessionList';
 window.currentSession = null;
 window.currentTrack = null;
 window.stemState = {};
+
+window.randomQueue = [];
 
 window.resyncAfter = 30; // seconds
 window.lastResync = window.performance.now();
@@ -376,6 +380,56 @@ function calculateDurations() {
         window.allSessions.count ++;
         window.allSessions.duration += sessionDuration;
     }
+}
+
+function noTracksAvailableException() {
+  this.message = "No tracks available";
+};
+
+function fillRandomQueue() {
+    let allTracks = []
+    for(let sessionIdx in window.stemSessions) {
+        for(let trackIdx in window.stemSessions[sessionIdx].tracks) {
+            allTracks.push({
+                sessionIdx: sessionIdx,
+                trackIdx: trackIdx
+            });
+        }
+    }
+    if(allTracks.length === 0) {
+        throw new noTracksAvailableException();
+        return;
+    }
+    window.randomQueue = shuffleArray(allTracks);
+}
+
+function playRandomTrack() {
+    if(window.randomQueue.length === 0) {
+        try {
+            fillRandomQueue();
+        }
+        catch(e) {
+          alert("ERROR: " + e.message);
+          return;
+        }
+    }
+    let itemToPlay = window.randomQueue.pop();
+    window.currentSession = itemToPlay.sessionIdx;
+    window.currentTrack = itemToPlay.trackIdx;
+    console.log(window.randomQueue.length);
+    renderTrackView(true);
+}
+
+/**
+ * Shuffles array in place. ES6 version
+ * @param {Array} a items An array containing the items.
+ */
+function shuffleArray(a) {
+    for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
 }
 
 /* genreal helper functions */
@@ -875,6 +929,10 @@ function navigate(e) {
         window.currentSession = null;
         window.currentTrack = null;
         renderMediaView();
+        return;
+    }
+    if(e.currentTarget.dataset.targettype === 'randomtrack') {
+        playRandomTrack();
         return;
     }
 }
