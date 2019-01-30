@@ -122,6 +122,8 @@ window.stemState = {};
 
 window.randomQueue = [];
 
+window.absoluteTime = false;
+
 window.resyncAfter = 30; // seconds
 window.lastResync = window.performance.now();
 
@@ -727,9 +729,7 @@ function renderTrackView(autoplay) {
             resyncStems();
         }
 
-        // TODO: implement toggle between tracktime and session time
-        let absoluteTime = false;
-        let timeToRender = (absoluteTime === false)
+        let timeToRender = (window.absoluteTime === false)
             ? player.currentTime
             : player.currentTime + window.stemSessions[window.currentSession].tracks[window.currentTrack].splitStart;
         $('#time__elapsed').innerHTML = formatTime(timeToRender);
@@ -738,12 +738,19 @@ function renderTrackView(autoplay) {
         });
     });
     player.addEventListener('durationchange', function() {
-        $('#time__total').innerHTML = formatTime(player.duration);
+        let timeToRender = (window.absoluteTime === false)
+            ? player.duration
+            : player.duration + window.stemSessions[window.currentSession].tracks[window.currentTrack].splitStart;
+        $('#time__total').innerHTML = formatTime(timeToRender);
     });
     player.addEventListener('ended', handleTrackEnded, false);
 
     $('.track__play').addEventListener(
         'click', togglePlayPause, false
+    );
+
+    $('.track__times').addEventListener(
+        'click', toggleAbsoluteTime, false
     );
 
     $('.tool__action--mute').addEventListener(
@@ -1003,6 +1010,14 @@ function resyncStems() {
         }
         player.currentTime = targetSecond;
     }
+}
+
+/* toggle time between absolute(session start) and relative(track start) */
+function toggleAbsoluteTime() {
+    window.absoluteTime = (window.absoluteTime === true)
+        ? false
+        : true;
+    $('#player0').dispatchEvent(new Event('durationchange'));
 }
 
 // redraw waveforms on resize
