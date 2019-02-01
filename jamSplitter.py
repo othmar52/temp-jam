@@ -791,12 +791,16 @@ def finishWebStemTrack(track):
     stemsJs = []
     # we need a very special weighted sorting...
     for stem in sortStems(track.stems):
+        stemVolume = guessInitalVolumeLevel(stem.normLevels, track.dbLevelsInputFiles)
+        if config.get('webstemplayer', 'drumsVolumeBoost') == '1':
+            if stem.uniqueStemName.find('drum') >= 0:
+                stemVolume = 1
         stemJsTemplate = getFileContent(str(jamConf.wsp.stemConfigTemplate))
         searchReplace = {
             '{stem.path}': str(stem.path),
             '{stem.peaks}': lineBreakedJoin(stem.wavPeaks, ','),
             '{stem.title}': stem.originalName,
-            '{stem.volume}': guessInitalVolumeLevel(stem.normLevels, track.dbLevelsInputFiles),
+            '{stem.volume}': stemVolume,
             '{stem.color}': stem.color,
             '{stem.normalizationLevels}': json.dumps(stem.normLevels),
             '{stem.byteSize}': str(stem.byteSize)
