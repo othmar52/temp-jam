@@ -6,7 +6,7 @@
 # TODO removal of output directory after processing in case it is empty
 # TODO never convert mono stems to stereo target files?
 # TODO cursor is missing in shell after executing script
-#   first appearance was implementing futures
+#   first appearance was after implementing concurrent futures
 #   typing "reset" brings back the cursor again
 # TODO use dom parser to inject javascript paths
 # TODO choose between trackLetter OR trackNumber by configuration
@@ -19,6 +19,7 @@
 # TODO multiple musician names within single input filename like "john-donald.wav"
 # TODO test the whole thing on windows
 #   TODO replace symlink stuff of webstemplayer with hard copies on windows
+# separate repository for trackname generator?
 
 # TODO improve silence detection: @see session 17 B astl which only has a tiny pop at the beginning
 
@@ -73,6 +74,8 @@ import json
 import os
 import re
 import logging
+# requires "Pillow" package
+from PIL import Image, ImageOps
 import hashlib
 import random
 import secrets
@@ -225,6 +228,7 @@ class ImageFile(object):
         self.newFileName = ''
         self.dateTime = None
         self.byteSize = 0
+        self.thumbTargetPath = ''
 
 class VideoFile(object):
     def __init__(self, pathObj):
@@ -232,6 +236,8 @@ class VideoFile(object):
         self.newFileName = ''
         self.dateTime = None
         self.byteSize = 0
+        self.thumbTargetPath = ''
+        self.stillTargetPath = ''
         
 class JamConf(object):
     def __init__(self):
@@ -762,7 +768,8 @@ def finishWebStemTrack(track):
         imageJsTemplate = getFileContent(str(jamConf.wsp.imageConfigTemplate))
         searchReplace = {
             '{image.path}': str(image.newFileName),
-            '{image.byteSize}': str(image.byteSize)
+            '{image.byteSize}': str(image.byteSize),
+            '{image.thumbPath}': str(image.thumbTargetPath)
         }
         for search in searchReplace:
             imageJsTemplate = imageJsTemplate.replace(search, str(searchReplace[search]))
@@ -773,7 +780,9 @@ def finishWebStemTrack(track):
         videoJsTemplate = getFileContent(str(jamConf.wsp.videoConfigTemplate))
         searchReplace = {
             '{video.path}': str(video.newFileName),
-            '{video.byteSize}': str(video.byteSize)
+            '{video.byteSize}': str(video.byteSize),
+            '{video.stillPath}': str(video.stillTargetPath),
+            '{video.thumbPath}': str(video.thumbTargetPath)
         }
         for search in searchReplace:
             videoJsTemplate = videoJsTemplate.replace(search, str(searchReplace[search]))
@@ -936,7 +945,17 @@ def finishWebStemSession():
     ))
     for image in jamConf.images:
         imagesTargetDir.mkdir(parents=True, exist_ok=True)
-        copyfile(str(image.path), ('%s/../../%s'% (str(imagesTargetDir), image.newFileName)))
+        sourcePath = str(image.path)
+        targetPath = ('%s/../../%s'% (str(imagesTargetDir), image.newFileName))
+        copyfile(sourcePath, targetPath)
+
+        # create thumbnails
+        # TODO enable/disable via config
+        # TODO move dimensions to config
+        size = (160, 160)
+        thumbSource = Image.open(sourcePath)
+        thumbTarget = ImageOps.fit(thumbSource, size, Image.ANTIALIAS)
+        thumbTarget.save(('%s/../../%s'% (str(imagesTargetDir), image.thumbTargetPath)))
 
 
     # copy videos
@@ -946,7 +965,21 @@ def finishWebStemSession():
     ))
     for video in jamConf.videos:
         videosTargetDir.mkdir(parents=True, exist_ok=True)
-        copyfile(str(video.path), ('%s/../../%s'% (str(videosTargetDir), video.newFileName)))
+        sourcePath = str(video.path)
+        targetPath = ('%s/../../%s'% (str(videosTargetDir), video.newFileName))
+        copyfile(sourcePath, targetPath)
+
+        # extract video frame
+        stillTargetPath = ('%s/../../%s'% (str(videosTargetDir), video.stillTargetPath))
+        captureVideoFrame(sourcePath, stillTargetPath )
+
+        # create thumbnails
+        # TODO enable/disable via config
+        # TODO move dimensions to config
+        size = (160, 160)
+        thumbSource = Image.open(stillTargetPath)
+        thumbTarget = ImageOps.fit(thumbSource, size, Image.ANTIALIAS)
+        thumbTarget.save(('%s/../../%s'% (str(imagesTargetDir), video.thumbTargetPath)))
 
 
 def sortStems(stemsList):
@@ -1351,6 +1384,7 @@ def searchImageFiles():
         image.byteSize = item.stat().st_size
         # keep original relative path in filename
         image.newFileName = 'data/images/' + str(item)[(len(str(jamConf.sourceDir))+1):].replace('/', '-')
+        image.thumbTargetPath = image.newFileName + '.thumbnail.png'
         result.append(image)
 
     return result
@@ -1368,6 +1402,8 @@ def searchVideoFiles():
         video.byteSize = item.stat().st_size
         # keep original relative path in filename
         video.newFileName = 'data/videos/' + str(item)[(len(str(jamConf.sourceDir))+1):].replace('/', '-')
+        video.thumbTargetPath = video.newFileName + '.thumbnail.png'
+        video.stillTargetPath = video.newFileName + '.png'
         result.append(video)
 
     return result

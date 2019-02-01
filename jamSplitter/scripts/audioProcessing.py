@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+# TODO rename to mediaProcessing.py as video thumb extraction is also within this file
+
 import json
 import logging
 import time
@@ -51,6 +53,15 @@ def convertWavToMp3(inputPath, outputPath, bitrate, track):
         str(outputPath)
     ]
     generalCmd(cmd, 'wav to mp3 conversion')
+
+def captureVideoFrame(inputPath, outputPath, second=5):
+    cmd = [
+        'ffmpeg', '-hide_banner', '-v', 'quiet', '-stats', '-y',
+        '-i', str(inputPath), '-vcodec', 'png', '-ss', str(second),
+        '-vframes', '1', '-an', '-f', 'rawvideo',
+        str(outputPath)
+    ]
+    generalCmd(cmd, 'capture video frame')
 
 def resampleWav(inputPath, outputPath):
     cmd = [

@@ -33,6 +33,7 @@
  * add some kind of search (tracknames, musicians,...)
  * any kind of visualization of actual volume values per stem during vol change  (title attribute?)
  * implement bpm tapper for manual bpm suggestion
+ * BUG: volume issue of soloed stems on unboost 
  * 
  * play() is called too early: https://developers.google.com/web/updates/2017/06/play-request-was-interrupted
  * remember changed volume levels per session (local storage?)
@@ -254,11 +255,22 @@ function prefixMediaPaths(sessionIndex, pathPrefix) {
     images.forEach(function(image, imageIndex) {
         window.stemSessions[sessionIndex].images[imageIndex].filePath = pathPrefix + image.filePath;
         window.stemSessions[sessionIndex].mediaPathCorrectionDone = true;
+        // TODO: remove after rebuild. legacy json does not have this property
+        if(typeof window.stemSessions[sessionIndex].images[imageIndex].thumbPath !== 'undefined') {
+            return;
+        }
+        window.stemSessions[sessionIndex].images[imageIndex].thumbPath = pathPrefix + image.thumbPath;
     });
     let videos = stemSessions[sessionIndex].videos;
-    videos.forEach(function(videos, videosIndex) {
-        window.stemSessions[sessionIndex].videos[videosIndex].filePath = pathPrefix + videos.filePath;
+    videos.forEach(function(video, videoIndex) {
+        window.stemSessions[sessionIndex].videos[videoIndex].filePath = pathPrefix + video.filePath;
         window.stemSessions[sessionIndex].mediaPathCorrectionDone = true;
+        // TODO: remove after rebuild. legacy json does not have this property
+        if(typeof window.stemSessions[sessionIndex].videos[videoIndex].thumbPath !== 'undefined') {
+            return;
+        }
+        window.stemSessions[sessionIndex].videos[videoIndex].thumbPath = pathPrefix + video.thumbPath;
+        window.stemSessions[sessionIndex].videos[videoIndex].stillPath = pathPrefix + video.stillPath;
     });
 }
 
