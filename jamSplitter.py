@@ -65,6 +65,15 @@
 #  = ~ 10,4 hours
 #  = ~ 10 min/session
 
+# benchmark 01.02.2019 ( 5 workers )
+#  64 sessions
+#  real    636m2,814s = 10,6 hours
+#  user    1026m18,707s
+#  sys     52m21,911s
+#
+#  = ~ 10,6 hours
+#  = ~ 10 min/session
+
 import argparse
 import configparser
 import fnmatch
@@ -989,6 +998,7 @@ def finishWebStemSession():
 def sortStems(stemsList):
     global jamConfig
     dictToSort = {0:[]}
+    # TODO use filename as 2nd sort priority (currently: xxx3, xxx1, xxx4)
     for stem in stemsList:
         if config.get('webstemplayer', 'drumsOnTop') == '1':
             if stem.uniqueStemName.find('drum') >= 0:
