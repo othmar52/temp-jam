@@ -125,7 +125,7 @@ window.randomQueue = [];
 
 window.absoluteTime = false;
 
-window.resyncAfter = 30; // seconds
+window.resyncAfter = 5; // seconds
 window.lastResync = window.performance.now();
 
 document.addEventListener('DOMContentLoaded', async function() {
@@ -239,6 +239,10 @@ function prefixAudioPaths(sessionIndex, trackIndex, pathPrefix) {
     stems.forEach(function(stem, stemIndex) {
         if( typeof window.stemSessions[sessionIndex].tracks[trackIndex].stems[stemIndex].pathCorrectionDone !== 'undefined') {
             // path correction already applied (maybe caused by duplicates during testing)
+            return;
+        }
+        if(window.stemSessions[sessionIndex].tracks[trackIndex].stems[stemIndex].filePath.substring(0,4) === 'http') {
+            // don't modify absolute paths that are hostet somewhere else
             return;
         }
         window.stemSessions[sessionIndex].tracks[trackIndex].stems[stemIndex].filePath = pathPrefix + stem.filePath;
@@ -709,11 +713,17 @@ function renderTrackView(autoplay) {
         }
         // createMediaElementSource() does not work for file:/// protocol
         if(document.location.protocol === 'file:') {
-            return
+            return;
         }
-
         // create volume meter
         let audioElement = $('#player'+idx);
+
+        // zippyshare hosted audio produce CORS error
+        // TODO is there a way to check for CORS header?
+        // TODO improve handling/configuration and remove this hardcoded edge case
+        if(audioElement.firstElementChild.src.indexOf(".zippyshare.com/downloadAudio?key=") > 0) {
+            return;
+        }
         let meterElement = document.createElement('div');
         meterElement.setAttribute('id', 'dbmeter'+idx);
         meterElement.setAttribute('class', 'dbmeter');
@@ -1020,7 +1030,12 @@ function resyncStems() {
             console.log('resync ' + targetSecond);
             continue;
         }
+        let delta = Math.abs(targetSecond - player.currentTime);
+        if(delta < 0.1) {
+            continue;
+        }
         player.currentTime = targetSecond;
+        console.log('resync ' + idx + ' with delta: ' + delta + ' seconds');
     }
 }
 
