@@ -1,6 +1,7 @@
 
        {
           filePath: '{stem.path}',
+          publicUrl: '',
           title: '{stem.title}',
           color: '{stem.color}',
           volume: {stem.volume},

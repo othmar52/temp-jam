@@ -154,7 +154,15 @@ def detectSilences(inputPath, dbLevel = '-45dB', silenceDuration = 2):
     ]
     return generalCmd(cmd, 'silence detection', True)
 
-        
+
+def muteNoiseSections(inputPath, outputPath, silences):
+    cmd = [
+        'ffmpeg', '-y', '-hide_banner', '-stats', '-i', str(inputPath),
+        '-af', f', '.join(silences),
+        str(outputPath)
+    ]
+    return generalCmd(cmd, 'muting noise sections', True)
+
 def mergeInputWavsToSingleFile(inputPaths, outputPath):
 
     cmd = ['ffmpeg', '-y', '-hide_banner', '-v', 'quiet', '-stats']

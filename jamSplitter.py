@@ -7,7 +7,7 @@
 # TODO never convert mono stems to stereo target files?
 # TODO cursor is missing in shell after executing script
 #   first appearance was after implementing concurrent futures
-#   typing "reset" brings back the cursor again
+#   typing "reset"[RETURN] brings back the cursor again
 # TODO use dom parser to inject javascript paths
 # TODO choose between trackLetter OR trackNumber by configuration
 # TODO normalize + volumeDetect BEFORE concatenating silence?
@@ -22,6 +22,11 @@
 # separate repository for trackname generator?
 
 # TODO improve silence detection: @see session 17 B astl which only has a tiny pop at the beginning
+
+# TODO implement auto upload to public hosting
+#   zippyshare for audio
+#   ??? for images
+#      maybe blur faces https://stackoverflow.com/questions/18064914/how-to-use-opencv-python-to-blur-faces
 
 # TODO WARNING: all stems seems to be silence. skipping track...
 ## 7 B fehlt
@@ -38,6 +43,7 @@
 # time /MUSIC/_swapfile/stromwerk/00NEW/jamSplitter.py -i /run/media/engine/Stromwerk/raw/0019.1-2017.07.16-coach/raw/
 # time /MUSIC/_swapfile/stromwerk/00NEW/jamSplitter.py -i /MUSIC/_swapfile/stromwerk/INc-TEMP/RAW-10-min/
 # time for i in $( find /run/media/engine/Stromwerk/ -mindepth 2 -name raw -type d | sort ); do /MUSIC/_swapfile/stromwerk/00NEW/jamSplitter.py -i "$i"; done
+# time for i in $( find /run/media/engine/ARCH4TB/Stromwerk/ -mindepth 2 -name raw -type d | sort ); do /MUSIC/_swapfile/stromwerk/00NEW/jamSplitter.py -i "$i"; done
 
 # benchmark 9.12.2018 (8 workers)
 #  57 sessions
@@ -169,6 +175,7 @@ class InputFile(object):
         self.originalName = ''
         self.musicianShorty = None
         self.duration = 0
+        self.preProcessed = pathObj
         # use same (random) color for all tracks in session
         self.color = ''
         
@@ -263,6 +270,7 @@ class JamConf(object):
             'cueSheetContent': ''
         }
         self.trackMergeRequired = False
+        self.noiseMuteRequired = False
         self.normalizeStemSplits = False
         self.normalizeTrackMergeRequired = False
         # wsp = web stem player
@@ -284,8 +292,13 @@ class JamConf(object):
 
         self.totalDuration = 0
 
-        self.images = [];
-        self.videos = [];
+        self.images = []
+        self.videos = []
+
+        self.noiseMute = {
+            'duration': 0,
+            'dB': 0
+        }
 
 
 class SilenceDetection(object):
@@ -365,11 +378,22 @@ def main():
     usedTrackTitles = []
     if jamConf.maxWorkers == 1:
         # non parallelized version
+
+        for inputFile in jamConf.jamSession.inputFiles:
+            preprocessInputFile(inputFile)
+
         for track in jamConf.jamSession.tracks:
             processTrack(track)
             usedTrackTitles.append(track.trackTitle)
     else:
         # paralellized tryout
+        with concurrent.futures.ProcessPoolExecutor(max_workers=jamConf.maxWorkers) as executor:
+            # detect noisy silences and replace with real silence
+            for inputFile in jamConf.jamSession.inputFiles:
+                processedInputFile = executor.submit(preprocessInputFile, (inputFile))
+                processedInputFile.add_done_callback(trackPreProcessorCallback)
+
+
         with concurrent.futures.ProcessPoolExecutor(max_workers=jamConf.maxWorkers) as executor:
             for trackIdx,track in enumerate(jamConf.jamSession.tracks):
                 processedTrack = executor.submit(processTrack, (track))
@@ -404,6 +428,14 @@ def persistSessionCounter():
     jamConf.lastSessionCounterFile.write_text(
         str(jamConf.jamSession.counter)
     )
+
+def trackPreProcessorCallback(processedInputFile):
+    global jamConf
+    processedInputFile = processedInputFile.result()
+    for idx,inputFile in enumerate(jamConf.jamSession.inputFiles):
+        if processedInputFile.path.resolve() == inputFile.path.resolve():
+            jamConf.jamSession.inputFiles[idx] = processedInputFile
+            return
 
 def trackProcessorCallback(processedTrack):
     global jamConf
@@ -507,6 +539,41 @@ def printCurrentSplitConfig():
         ))
     #sys.exit()
 
+def preprocessInputFile(inputFile):
+    if jamConf.noiseMuteRequired == False:
+        return inputFile
+
+    silencesRaw = detectSilences(
+        inputFile.path,
+        jamConf.noiseMute['dB'],
+        jamConf.noiseMute['duration']
+    )
+
+    _doing("detecting noise for track %s" % inputFile.uniqueStemName )
+    silences = silenceDetectResultToSilenceBoundries(silencesRaw)
+    _done()
+    if len(silences) == 0:
+        print(" no silences found. keeping file as is")
+        return inputFile
+
+    _doing("muting noise for track %s" % inputFile.uniqueStemName )
+
+    mutesSectionsFile = Path("%s/input_%s.muted-noise.wav" %
+        (str(jamConf.tempDir),
+        inputFile.uniqueStemName)
+    )
+
+    muteNoiseSections(
+        inputFile.path.resolve(),
+        mutesSectionsFile.resolve(),
+        silences
+    )
+    _done()
+    inputFile.preProcessed = mutesSectionsFile
+
+    return inputFile
+
+
 def _doing(term, newLine=False):
     print( colored( '  %s' % term , 'white'), end='', flush=True )
     _newLine(newLine)
@@ -597,7 +664,7 @@ def processTrack(track):
         # split out the portion we need
         splittedWavPath = Path("%s/track_%s_wavsplit_of_stem_%s.wav" % (str(jamConf.tempDir), track.trackNumberPaddedZero, inputStem.uniqueStemName))
         _doing('splitting...')
-        createWavSplit(str(inputStem.path), str(splittedWavPath), startSecond, endSecond)
+        createWavSplit(str(inputStem.preProcessed), str(splittedWavPath), startSecond, endSecond)
         _done()
 
         # check if we have produced skipable silence files
@@ -645,7 +712,7 @@ def processTrack(track):
         else:
             webStem = Stem(Path(str(splittedWavPath)))
         
-        webStem.byteSize = inputStem.path.stat().st_size
+        webStem.byteSize = inputStem.preProcessed.stat().st_size
         webStem.uniqueStemName = inputStem.uniqueStemName
         webStem.originalName = inputStem.originalName
         webStem.musicianShorty = inputStem.musicianShorty
@@ -1225,6 +1292,13 @@ def validateConfig():
 
     jamConf.lastSessionCounterFile = Path(getConfigPath('general', 'lastSessionCounterFile') )
     jamConf.lastSessionCounterFile.touch(exist_ok=True)
+
+    if config.get('enable', 'noiseMute') == '1':
+        jamConf.noiseMuteRequired = True
+        # TODO: check for pausible values...
+        jamConf.noiseMute['duration'] = int(config.get('noiseMute', 'duration'))
+        jamConf.noiseMute['dB'] = config.get('noiseMute', 'dB')
+
 
     if config.get('enable', 'bpmDetect') == '1':
         jamConf.trackMergeRequired = True

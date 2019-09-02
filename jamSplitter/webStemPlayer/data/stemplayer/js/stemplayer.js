@@ -237,6 +237,10 @@ function prefixAudioPaths(sessionIndex, trackIndex, pathPrefix) {
 
     let stems = window.stemSessions[sessionIndex].tracks[trackIndex].stems;
     stems.forEach(function(stem, stemIndex) {
+        // some backwards compatibility because publicUrl is a new property
+        if( typeof window.stemSessions[sessionIndex].tracks[trackIndex].stems[stemIndex].publicUrl === 'undefined') {
+            window.stemSessions[sessionIndex].tracks[trackIndex].stems[stemIndex].publicUrl = '';
+        }
         if( typeof window.stemSessions[sessionIndex].tracks[trackIndex].stems[stemIndex].pathCorrectionDone !== 'undefined') {
             // path correction already applied (maybe caused by duplicates during testing)
             return;
@@ -664,10 +668,14 @@ function renderTrackView(autoplay) {
 
         // substitute template markers
         let stemWrapperMarkup = stemWrapperTemplate;
+        let audioPath = stem.filePath;
+        if (stem.publicUrl !== '') {
+            //audioPath = stem.publicUrl;
+        }
         stemWrapperMarkup = stemWrapperMarkup
             .replace(/{index}/g, idx)
             .replace(/{indexDisplay}/g, idx+1)
-            .replace(/{audiosource}/g, stem.filePath)
+            .replace(/{audiosource}/g, audioPath)
             .replace(/{color}/g, stem.color)
             .replace(/{title}/g, stem.title);
 
@@ -1074,8 +1082,10 @@ function debounceResizeEvent(c, t) {
   return onresize;
 }
 
-
 function togglePlayPause(e) {
+    if(window.audioCtx) {
+        window.audioCtx.resume();
+    }
     e.preventDefault();
     e.currentTarget.blur();
     let playerCmd = null;

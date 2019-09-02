@@ -76,9 +76,10 @@ def sortByPriority(itemsToSort, priorityStrings, removeDuplicates=False):
 
 
 ''' parse the result and format it to trackStart - trackEnd\n'''
+''' TODO: use result of silenceDetectResultToSilenceBoundries() as a basis'''
 def silenceDetectResultToTrackBoundries(resultLines, totalDuration, silencePadding = 1.25, dontSplitTreshold = 6):
  
-    suggestedTracks = [];
+    suggestedTracks = []
     previousEnd = 0
     currentStart = 0
     currentEnd = 0
@@ -102,11 +103,7 @@ def silenceDetectResultToTrackBoundries(resultLines, totalDuration, silencePaddi
             if arg == '[silencedetect':
                 lineArgs = lineArgs[idx:]
                 break
-                
-        indexOffset = 0
-        if lineArgs[0] != '[silencedetect':
-            indexOffset = 4
-        
+
         if line.find('silence_start') >= 0:
             currentStart = float(lineArgs[4])
             # check if we start with a silence
@@ -166,6 +163,58 @@ def silenceDetectResultToTrackBoundries(resultLines, totalDuration, silencePaddi
             secondsToMinutes(foundTrackEnd)
         ))
     return suggestedTracks
+
+
+
+''' parse the result and format it to trackStart - trackEnd\n'''
+def silenceDetectResultToSilenceBoundries(resultLines, silencePadding = 1):
+
+    foundSilences = []
+    splittedSilence = resultLines.split('\n')
+    for line in splittedSilence:
+        if line.find('silencedetect') < 0:
+            continue
+
+        lineArgs = line.strip().split()
+
+        # TODO: unexplainable list modification with some stdout stuff which should be skipped by condition above
+        # sometimes we need to remove the first few list items to can relay on the indices
+        for idx,arg in enumerate(lineArgs):
+            if arg == '[silencedetect':
+                lineArgs = lineArgs[idx:]
+                break
+
+        if line.find('silence_start') >= 0:
+            currentStart = float(lineArgs[4])
+            continue
+
+        if line.find('silence_end') >= 0 or line.find('silence_duration') >= 0:
+            currentEnd = float(lineArgs[4])
+
+            foundSilences.append(
+                'afade=enable=\'between(t,%s,%s)\':t=out:st=%s:d=%s,volume=enable=\'between(t,%s,%s)\':volume=0,afade=enable=\'between(t,%s,%s)\':t=in:st=%s:d=%s' % (
+                    # fade out substitutions
+                    str(currentStart),
+                    str(currentStart + silencePadding),
+                    str(currentStart),
+                    str(silencePadding),
+
+                    # mute substitutions
+                    str(currentStart + silencePadding),
+                    str(currentEnd - silencePadding),
+
+                    # fade in substitutions
+                    str(currentEnd - silencePadding),
+                    str(currentEnd),
+                    str(currentEnd - silencePadding),
+                    str(silencePadding)
+                )
+            )
+            continue
+
+    return foundSilences
+
+
 '''
  replaces exotic characters with similar [A-Za-z0-9] and removes all
  other characters of a string
